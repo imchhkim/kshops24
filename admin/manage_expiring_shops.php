@@ -179,7 +179,7 @@ $shop_list = $shops->fetchAll();
                                 </a>
                             </div>
                             <div class="small text-primary"><i
-                                    class="bi bi-globe2 me-1"></i>KShops24.com/<?= $s['subdomain'] ?></div>
+                                    class="bi bi-globe2 me-1"></i>kshops24.com/<?= $s['subdomain'] ?></div>
                         </td>
 
                         <td class="t-center">
@@ -196,7 +196,7 @@ $shop_list = $shops->fetchAll();
 
                         <!-- 현황/링크 -->
                         <td class="t-center">
-                            <a href="https://KShops24.com/<?= $s['subdomain'] ?>" target="_blank"
+                            <a href="https://kshops24.com/<?= $s['subdomain'] ?>" target="_blank"
                                 class="btn btn-sm btn-outline-secondary py-0" style="font-size: 0.7rem;">
                                 <i class="bi bi-box-arrow-up-right me-1"></i>방문
                             </a>

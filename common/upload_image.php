@@ -9,7 +9,7 @@
 ob_start();
 
 // 1. 서버 루트 절대 경로 정의
-$root_path = $_SERVER['DOCUMENT_ROOT']; // /home/u743828642/domains/KShops24.com/public_html
+$root_path = $_SERVER['DOCUMENT_ROOT']; // /home/u743828642/domains/kshops24.com/public_html
 
 // 2. [버그 수정] DB 세션 정보 공유를 위해 공통 엔진(common_header.php)을 메인으로 호출
 // 이전에는 자체적으로 session_start()만 호출하여 DB 세션(로그인 상태)을 읽어오지 못하고 권한 오류로 튕겨냈습니다.

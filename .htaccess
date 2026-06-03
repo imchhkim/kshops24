@@ -7,7 +7,7 @@ RewriteEngine On
     Deny from all
 </Files>
 
-# 상점 서브도메인 라우팅 (예: KShops24.com/momchicken -> shop_view.php?subdomain=momchicken)
+# 상점 서브도메인 라우팅 (예: kshops24.com/momchicken -> shop_view.php?subdomain=momchicken)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([a-zA-Z0-9_-]+)/?$ shop_view.php?subdomain=$1 [L,QSA]

@@ -213,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $msg .= "▪ 연락처: {$phone}\n";
                     $msg .= "▪ 주소: {$address} {$landmark}\n\n";
-                    $msg .= "<a href='https://KShops24.com/shops/manage_shop.php?pg=manage_shop_orders'>👉 배달 관리 페이지 확인하기</a>";
+                    $msg .= "<a href='https://kshops24.com/shops/manage_shop.php?pg=manage_shop_orders'>👉 배달 관리 페이지 확인하기</a>";
 
                     // [알림 함수 호출] 공용 텔레그램 발송 함수 실행
                     if (function_exists('send_ps24_telegram')) {

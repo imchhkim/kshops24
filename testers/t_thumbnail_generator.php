@@ -5,7 +5,7 @@
  * 1. 과거에 생성된 잉여 썸네일(thumb_*) 파일들을 모두 찾아 삭제합니다. (Inode 반토막)
  * 2. 폭이 1000px을 초과하는 초고해상도 원본 사진을 모바일에 맞게 1000px로 줄여 덮어씁니다. (용량 다이어트)
  * (DB 수정 없이 물리적 파일만 교체/삭제하므로 매우 안전합니다.)
- * 실행 방법: 슈퍼 관리자 로그인 후 브라우저 주소창에 https://KShops24.com/testers/t_thumbnail_generator.php 접속
+ * 실행 방법: 슈퍼 관리자 로그인 후 브라우저 주소창에 https://kshops24.com/testers/t_thumbnail_generator.php 접속
  */
 
 // 1. 관리자 공통 헤더 로드

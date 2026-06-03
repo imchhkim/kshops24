@@ -10,8 +10,8 @@ date_default_timezone_set('Asia/Manila');
 
 // 1. 데이터베이스 접속 정보 설정
 $db_host = 'localhost'; // 호스팅 내부 접속 시 일반적으로 localhost 사용
-$db_name = 'u743828642_KShops24'; // 데이터베이스 이름
-$db_user = 'u743828642_KShops24'; // 데이터베이스 사용자 ID
+$db_name = 'u743828642_kshops24'; // 데이터베이스 이름
+$db_user = 'u743828642_kshops24_admin'; // 데이터베이스 사용자 ID
 $db_pass = 'zlatmgK15%';           // 데이터베이스 비밀번호
 $db_charset = 'utf8mb4';           // 한국어 및 이모지 지원을 위한 설정
 

@@ -94,7 +94,7 @@ window.showMyInfoModal = function() { showBsModal('phInfoModal'); };
 // ==========================================
 // 2. 카카오 로그인 및 전화번호 헬퍼
 // https://developers.kakao.com/console/app/1403294/product/login/advanced 접속해서
-// Redirect URI에 https://KShops24.com/shops/customer_kakao_callback.php 등록 필요
+// Redirect URI에 https://kshops24.com/shops/customer_kakao_callback.php 등록 필요
 // ==========================================
 try {
     if (typeof Kakao !== 'undefined' && !Kakao.isInitialized()) {
@@ -117,7 +117,7 @@ function loginWithKakao(keepAction = false, btnElem = null) {
     
     const cfg = getShopConfig();
     const subdomain = (cfg && cfg.subdomain) ? cfg.subdomain : ''; 
-    location.href = 'https://kauth.kakao.com/oauth/authorize?client_id=461d2ab817f7b7832592405576a4068d&redirect_uri=https%3A%2F%2FKShops24.com%2Fshops%2Fcustomer_kakao_callback.php&response_type=code&state=' + encodeURIComponent(subdomain);
+    location.href = 'https://kauth.kakao.com/oauth/authorize?client_id=461d2ab817f7b7832592405576a4068d&redirect_uri=https%3A%2F%2Fkshops24.com%2Fshops%2Fcustomer_kakao_callback.php&response_type=code&state=' + encodeURIComponent(subdomain);
 }
 
 // ==========================================

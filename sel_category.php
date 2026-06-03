@@ -130,7 +130,7 @@ $monthly_fee = $_GET['monthly_fee'] ?? '상담 후 결정';
     <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand py-2" href="index.php">
-                <img src="/images/philbiz24_logo01.png" alt="KShops24" style="height: 42px; width: auto; display: block;">
+                <img src="/images/kshops24_logo04.png" alt="KShops24" style="height: 42px; width: auto; display: block;">
             </a>
         </div>
     </nav>

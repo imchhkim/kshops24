@@ -88,7 +88,7 @@ try {
                     <p class="mb-0 small text-muted" style="line-height: 1.6;">
                         본 상점의 모든 데이터는 <strong class="text-dark"><?= $deleted_date_str ?></strong>에 시스템에서 완전히 삭제될 예정입니다.
                         상점 관리자께서는
-                        <a href="https://KShops24.com/shops/login.php"
+                        <a href="https://kshops24.com/shops/login.php"
                             target="_blank"
                             class="badge bg-primary text-decoration-none px-2 py-1 mx-1 shadow-sm transition-all"
                             style="font-size: 0.75rem; vertical-align: middle;">
@@ -677,7 +677,7 @@ $fnb_js_ver = file_exists($_SERVER['DOCUMENT_ROOT'] . $fnb_js_path) ? filemtime(
                 
                 <?php if ($shop['status'] === 'inactive'): ?>
                 <p class="text-muted mb-0" style="font-size: 0.75rem;">상점이 "삭제"되면 상점 및 모든 데이터가 영구 삭제됩니다.<br>상점 관리자께서는
-                    <a href="https://KShops24.com/shops/login.php"
+                    <a href="https://kshops24.com/shops/login.php"
                         target="_blank"
                         class="badge bg-primary text-decoration-none px-2 py-1 mx-1 shadow-sm transition-all"
                         style="font-size: 0.75rem; vertical-align: middle;">
@@ -1168,7 +1168,7 @@ $fnb_js_ver = file_exists($_SERVER['DOCUMENT_ROOT'] . $fnb_js_path) ? filemtime(
             <div class="promo-banner p-4 rounded-4 shadow-sm text-center border">
                 <p class="text-muted fw-bold small mb-2"><?php echo __('비싼 배달앱 수수료는 그만!'); ?></p>
                 <div class="bg-white d-inline-block px-4 py-2 rounded-pill mb-3 shadow-sm">
-                    <img src="/images/philbiz24_logo01.png" alt="KShops24" style="height: 24px; object-fit: contain;">
+                    <img src="/images/kshops24_logo04.png" alt="KShops24" style="height: 24px; object-fit: contain;">
                 </div>
                 <div class="text-primary fw-bold" style="font-size: 0.95rem;">
                     <?php echo __('최저의 월 사용료 만으로 우리 매장의 </br>멋진 배달 홈페이지 만들기'); ?> <i class="bi bi-arrow-right-circle-fill ms-1"></i>

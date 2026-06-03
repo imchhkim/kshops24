@@ -136,7 +136,7 @@ unset($_SESSION['reg_complete_id']);
                 <div class="alert alert-info border-0 shadow-sm mb-4" style="border-radius: 15px;">
                     <p class="mb-1 small text-muted">사장님의 상점 주소 (즉시 오픈됨)</p>
                     <a href="/<?php echo $my_id; ?>" target="_blank" class="text-decoration-none">
-                        <h5 class="fw-bold text-dark mb-0">www.KShops24.com/<br><?php echo $my_id; ?> <i class="bi bi-box-arrow-up-right fs-6 ms-1 text-primary"></i></h5>
+                        <h5 class="fw-bold text-dark mb-0">www.kshops24.com/<br><?php echo $my_id; ?> <i class="bi bi-box-arrow-up-right fs-6 ms-1 text-primary"></i></h5>
                     </a>
                 </div>
             <?php endif; ?>

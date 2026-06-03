@@ -49,7 +49,7 @@
                                         </tr>
                                         <tr>
                                             <td class="label" style="width: 150px;"><span style="font-weight: bolder;">상점접속 도메인 *</span></td>
-                                            <td class="value">https://KShops24.com/{{shops:subdomain}}<br></td>
+                                            <td class="value">https://kshops24.com/{{shops:subdomain}}<br></td>
                                         </tr>
                                         <tr>
                                             <td class="label" style="width: 150px;"><span style="font-weight: bolder;">관리자 이메일</span></td>
@@ -64,7 +64,7 @@
                             </div>
 
                             <div class="terms-box" style="color: rgb(33, 37, 41);"><br></div>
-                            <div class="terms-box" style="color: rgb(33, 37, 41);"><span class="terms-title">📜&nbsp;<span style="font-weight: bolder;">서비스 이용 약관 및 면책 조항&nbsp;<a href="https://KShops24.com/common/terms_of_use.php" target="_blank">바로가기&nbsp;</a></span></span>
+                            <div class="terms-box" style="color: rgb(33, 37, 41);"><span class="terms-title">📜&nbsp;<span style="font-weight: bolder;">서비스 이용 약관 및 면책 조항&nbsp;<a href="https://kshops24.com/common/terms_of_use.php" target="_blank">바로가기&nbsp;</a></span></span>
                                 <div class="terms-text">
                                     <p><br></p>
                                 </div>

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </html>
     ";
 
-    $from = "support@KShops24.com";
+    $from = "support@kshops24.com";
     $headers  = "MIME-Version: 1.0\r\n";
     $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
     $headers .= "Content-Transfer-Encoding: base64\r\n";

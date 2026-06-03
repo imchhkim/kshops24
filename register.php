@@ -48,8 +48,8 @@ if (isset($_POST['ajax_send_auth_code'])) {
     // 이메일 발송
     $stmt_cs = $pdo->prepare("SELECT set_value FROM site_settings WHERE set_key = 'cs_email'");
     $stmt_cs->execute();
-    $cs_email = $stmt_cs->fetchColumn() ?: 'support@KShops24.com';
-    $from_email = (strpos($cs_email, '@KShops24.com') !== false) ? $cs_email : 'support@KShops24.com';
+    $cs_email = $stmt_cs->fetchColumn() ?: 'support@kshops24.com';
+    $from_email = (strpos($cs_email, '@kshops24.com') !== false) ? $cs_email : 'support@kshops24.com';
 
     $subject = '=?UTF-8?B?' . base64_encode("[KShops24] 이메일 인증 번호 안내") . '?=';
     $headers  = "MIME-Version: 1.0\r\n";
@@ -355,7 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_registration'])
                     // [개선] 이메일 본문이 너무 길어지는 것을 방지하기 위해 내용 요약 및 링크 추가
                     $terms_plain = strip_tags(html_entity_decode($terms_of_use_raw, ENT_QUOTES, 'UTF-8'));
                     if (mb_strlen($terms_plain, 'UTF-8') > 150) {
-                        $terms_of_use = mb_substr($terms_plain, 0, 150, 'UTF-8') . '... <br><br><a href="https://KShops24.com/common/terms_of_use.php" target="_blank" style="display:inline-block; padding:10px 20px; background-color:#f4f7f9; color:#004aad; border:1px solid #e2e8f0; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">이용 약관 자세히 보기 →</a>';
+                        $terms_of_use = mb_substr($terms_plain, 0, 150, 'UTF-8') . '... <br><br><a href="https://kshops24.com/common/terms_of_use.php" target="_blank" style="display:inline-block; padding:10px 20px; background-color:#f4f7f9; color:#004aad; border:1px solid #e2e8f0; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px;">이용 약관 자세히 보기 →</a>';
                     } else {
                         $terms_of_use = $terms_of_use_raw;
                     }
@@ -559,7 +559,7 @@ $categories = $json_cats ? json_decode($json_cats, true) : [
                     <h2 class="fw-bold" style="color:#004aad;">KShops24</h2>
                 </a>             
                 <p class="text-muted">사장님의 비즈니스 성장을 위한 입점 신청을 시작합니다<a
-                        href="https://KShops24.com/register.php?dev_test=1">.</a></p>
+                        href="https://kshops24.com/register.php?dev_test=1">.</a></p>
             </div>
 
             <?php if (isset($_GET['dev_test']) && $_GET['dev_test'] == '1'): ?>
@@ -715,12 +715,12 @@ $categories = $json_cats ? json_decode($json_cats, true) : [
                     <label class="form-label text-danger small">신청 후 수정이 불가능하니, 신중히 선택해 주세요 !!!</label>
                     <div class="mt-2 bg-light p-2 rounded border small mb-3">
                         <i class="bi bi-info-circle-fill text-primary"></i> 향후 상점 웹사이트 주소는 "<span
-                            class="text-danger fw-bold">https://KShops24.com/상점 아이디</span>" 형태가 됩니다. <div
-                            class="mt-2 bg-light p-2 rounded border small">예: https://KShops24.com/<span
+                            class="text-danger fw-bold">https://kshops24.com/상점 아이디</span>" 형태가 됩니다. <div
+                            class="mt-2 bg-light p-2 rounded border small">예: https://kshops24.com/<span
                                 class="text-danger fw-bold">sunrisecoffee</span></div>
                     </div>
                     <div class="input-group shadow-sm">
-                        <span class="input-group-text text-muted">KShops24.com /</span>
+                        <span class="input-group-text text-muted">kshops24.com /</span>
                         <input type="text" id="subdomain" name="subdomain" class="form-control check-unique"
                             data-field="subdomain" value="<?php echo htmlspecialchars($form_data['subdomain']); ?>"
                             placeholder="영문 소문자 및 숫자 조합 가능" required>

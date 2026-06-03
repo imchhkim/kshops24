@@ -271,7 +271,7 @@ if ($tab_mode === 'action') {
     </div>
 </body>
 </html>';
-                        $headers  = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\nFrom: KShops24 <support@KShops24.com>\r\nX-Mailer: PHP/" . phpversion();
+                        $headers  = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\nFrom: KShops24 <support@kshops24.com>\r\nX-Mailer: PHP/" . phpversion();
                         $email_result = @mail($to_email, $subject, chunk_split(base64_encode($html_content)), $headers);
                     } else {
                         if (function_exists('sendShopEmail')) {

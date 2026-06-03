@@ -58,7 +58,7 @@
     페이지 하단에 추가 경고를 노출할 수 있습니다.
 -->
 <footer class="mt-5 py-3 text-center text-muted border-top small">
-    &copy; <?php echo date('Y'); ?> <a href="https://KShops24.com/" class="text-muted" target="_blank">KShops24</a> All rights reserved.
+    &copy; <?php echo date('Y'); ?> <a href="https://kshops24.com/" class="text-muted" target="_blank">KShops24</a> All rights reserved.
 </footer>
 
 <script>

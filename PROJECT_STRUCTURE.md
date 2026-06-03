@@ -53,7 +53,7 @@
   - 📄 terms_of_use.php  # 2.95 KB | 26-03-26 15:04
   - 📄 upload_image.php  # 10.77 KB | 26-05-30 15:56
 - 📁 images/
-  - 📄 philbiz24_logo01.png  # 251.52 KB | 26-02-15 22:46
+  - 📄 kshops24_logo04.png  # 251.52 KB | 26-02-15 22:46
 - 📁 manuals/
   - 📁 images/
     - 📄 KShops24_domain_manual_01.png  # 103.7 KB | 26-05-19 22:47

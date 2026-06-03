@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $msg .= "▪ 관심매물:\n{$item_details}";
                     $msg .= "▪ 연락처: {$phone}\n";
                     $msg .= "▪ 문의내용: {$inquiry}\n\n";
-                    $msg .= "<a href='https://KShops24.com/shops/login.php'>👉 관리자 페이지에서 확인하기</a>";
+                    $msg .= "<a href='https://kshops24.com/shops/login.php'>👉 관리자 페이지에서 확인하기</a>";
 
                     if (function_exists('send_ps24_telegram')) send_ps24_telegram($msg, $shop_info['telegram_chat_id']);
                 }

@@ -472,7 +472,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($message) echo $message; ?>
 
                 <div class="alert alert-info small mb-4">
-                    <i class="bi bi-info-circle-fill me-1"></i> <code>https://KShops24.com/register.php?dev_test=1</code> 등을 통해 만들어둔 <b>빈 상점의 ID(숫자)</b>를 입력하면, <b>시스템에 내장된 프리미엄 정적 데이터 세트</b>를 즉시 생성해 채워줍니다. (기존 데이터는 삭제됩니다)
+                    <i class="bi bi-info-circle-fill me-1"></i> <code>https://kshops24.com/register.php?dev_test=1</code> 등을 통해 만들어둔 <b>빈 상점의 ID(숫자)</b>를 입력하면, <b>시스템에 내장된 프리미엄 정적 데이터 세트</b>를 즉시 생성해 채워줍니다. (기존 데이터는 삭제됩니다)
                 </div>
 
                 <form method="POST">
