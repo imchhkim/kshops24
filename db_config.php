@@ -40,7 +40,10 @@ try {
     // 전역에서 공유하여 사용할 고유 DB 커넥션 객체 바인딩
     $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
 
-} catch (\PDOException $e) {
+} catch (PDOException $e) {
+
+die("백엔드 데이터베이스 연결 실패: " . $e->getMessage());
+
     // 1. 보안을 위해 실제 에러 내용은 서버 로그에 기록합니다. (Hostinger의 error_log 파일에서 확인 가능)
     error_log("DB Connection Failed: " . $e->getMessage());
 
