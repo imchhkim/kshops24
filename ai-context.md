@@ -4,7 +4,7 @@
 3. 인증: 카카오 로그인 필수
 4. 기술 스택: PHP, MySQL, Bootstrap 5, Kakao JavaScript SDK
 5. 핵심 개발 원칙 (매우 중요):
-   - 개발 환경(/public_html/test_env)에서 개발 작업을 한 후에, git을 이용해서 서비스 환경(/public_html)로 코드가 이동되는 구조.
+   - 개발 환경(URL : test.kshops24.com, 서버 폴더 : /public_html/test_env)에서 개발 작업을 한 후에, git을 이용해서 서비스 환경(URL : kshops24.com, 서버 폴더 : /public_html)로 코드가 이동되는 구조.
    - 땜빵식(Band-aid) 코딩 절대 금지: 버그 발생 시 억지로 이벤트를 막거나 덮어씌우지 말고, 프레임워크와 네이티브 로직의 근본 원인을 파악해 구조적으로 해결한다.
    - 모듈화 및 리팩토링 지향 (DRY 원칙): 코드 작성 시 항상 기능의 재사용성을 고려한다. 중복 코드를 방지하고 공통 파일(/common/lib_utils.php 등)을 활용해 확장성 높은 모듈 형태로 코딩한다.
    - 전체 시스템의 파일 구조를 나타내는 파일(PROJECT_STRUCTURE.md), DB table의 구조(DDL)을 보여주는 파일(schema.sql)을 참고하여 코딩한다.

@@ -25,7 +25,7 @@ if (strpos($current_host, 'test.kshops24.com') !== false) {
     define('DB_USER', 'u743828642_kshops24_admin'); // 새로 만든 정식 관리자 계정
     define('DB_PASS', 'zlatmgK15%');                // 새 인증 보안 암호 상수
     define('DB_NAME', 'u743828642_kshops24');      // 🌟 마이그레이션 완료된 진짜 상용 디비!
-    define('DISPLAY_ERRORS', false);               // 고객 보안을 위해 에러 숨김
+    define('DISPLAY_ERRORS', true);               // 고객 보안을 위해 에러 숨김
 }
 
 // 무결성 PDO 연결 바인딩 (화면 깜빡임 없는 AJAX CRUD 및 페이징 검색 전담)
