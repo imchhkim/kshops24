@@ -63,4 +63,4 @@ git merge develop              # 검증된 코드를 메인 방에 병합
 git push origin main           # 🚀 실서버 무중단 자동 배포 신호탄 발생!
 
 # [4단계] 다시 다음 개발을 위해 안전한 방으로 대피하기
-git checkout develop           # 다시 가볍게 코딩할 작업방으로 복귀 
+git checkout develop           # 다시 가볍게 코딩할 작업방으로 복귀
