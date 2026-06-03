@@ -1,35 +1,44 @@
 <?php
 
 /**
- * KShops24 Database Configuration
- * 파트너님이 제공해주신 최신 호스팅 정보를 기반으로 설정되었습니다.
+ * K-Shops24 데이터베이스 인프라 환경설정
+ * 코드를 수정하거나 신규 작성할 때 반드시 자세한 코멘트를 함께 누적합니다.
  */
 
-// [추가] PHP의 시간대(Timezone)를 필리핀 시간으로 설정 (주문 번호 생성 시 오늘 날짜가 정확히 반영되도록 함)
-date_default_timezone_set('Asia/Manila');
+// 현재 접속 브라우저의 호스트명을 기반으로 백엔드 인프라(테스트/실서버) 자동 분기
+$current_host = $_SERVER['HTTP_HOST'] ?? '';
 
-// 1. 데이터베이스 접속 정보 설정
-$db_host = 'localhost'; // 호스팅 내부 접속 시 일반적으로 localhost 사용
-$db_name = 'u743828642_kshops24'; // 데이터베이스 이름
-$db_user = 'u743828642_kshops24_admin'; // 데이터베이스 사용자 ID
-$db_pass = 'zlatmgK15%';           // 데이터베이스 비밀번호
-$db_charset = 'utf8mb4';           // 한국어 및 이모지 지원을 위한 설정
+if (strpos($current_host, 'test.kshops24.com') !== false) {
+    // =================================================================
+    // [인프라 A] 서브도메인 테스트 서버 환경 DB 상수 (독립 샌드박스)
+    // =================================================================
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'u743828642_philshop24'); // 기존 유저 또는 테스트용 유저
+    define('DB_PASS', 'zlatmgK15%');              // 기존 암호 상수
+    define('DB_NAME', 'u743828642_philshop24');    // 🌟 테스트 전용 독립 디비로 격리!
+    define('DISPLAY_ERRORS', true);                // 개발 중 디버깅을 위해 에러 오픈
+} else {
+    // =================================================================
+    // [인프라 B] 정식 서비스 메인 운영 환경 DB 상수 (상용 라이브 데이터)
+    // =================================================================
+    define('DB_HOST', 'localhost');
+    define('DB_USER', 'u743828642_kshops24_admin'); // 새로 만든 정식 관리자 계정
+    define('DB_PASS', 'zlatmgK15%');                // 새 인증 보안 암호 상수
+    define('DB_NAME', 'u743828642_kshops24');      // 🌟 마이그레이션 완료된 진짜 상용 디비!
+    define('DISPLAY_ERRORS', false);               // 고객 보안을 위해 에러 숨김
+}
 
-// 2. PDO를 이용한 안전한 연결
+// 무결성 PDO 연결 바인딩 (화면 깜빡임 없는 AJAX CRUD 및 페이징 검색 전담)
 try {
-    $dsn = "mysql:host=$db_host;dbname=$db_name;charset=$db_charset";
+    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // 에러 발생 시 예외 발생
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // 결과를 연관 배열로 반환
-        PDO::ATTR_EMULATE_PREPARES   => false,                  // SQL 인젝션 방지 보안 설정
-        // [수정] 필리핀 타임존 고정 및 Collation 충돌 방지를 위한 문자셋 명시
-        PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+08:00', NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
     ];
-
-    $pdo = new PDO($dsn, $db_user, $db_pass, $options);
-
-    // 연결 성공 확인용 (운영 시에는 주석 처리하거나 삭제하세요)
-    // echo "Database Connected Successfully!"; 
+    
+    // 전역에서 공유하여 사용할 고유 DB 커넥션 객체 바인딩
+    $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
 
 } catch (\PDOException $e) {
     // 1. 보안을 위해 실제 에러 내용은 서버 로그에 기록합니다. (Hostinger의 error_log 파일에서 확인 가능)
