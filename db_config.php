@@ -43,9 +43,8 @@ try {
 } catch (PDOException $e) {
 
     // 무조건 에러 메시지 노출 (개발/디버깅용)
-    die("DB Connection Failed: " . $e->getMessage());
+    // die("DB Connection Failed: " . $e->getMessage());
 
-    /* 기존 코드 주석 처리
     // 1. 보안을 위해 실제 에러 내용은 서버 로그에 기록합니다. (Hostinger의 error_log 파일에서 확인 가능)
     error_log("DB Connection Failed: " . $e->getMessage());
 
@@ -62,5 +61,5 @@ try {
             </div>
         </div>
     ");
-    */
+
 }
