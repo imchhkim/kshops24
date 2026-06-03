@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KShops24 - 전용 도메인 연결 매뉴얼 (Cloudflare)</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* * KShops24 Custom Setup Manual Style
+         * 중복 정의를 피하고 깨끗하게 정돈된 CSS 패턴 적용 
+         */
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            color: #212529;
+        }
+        .manual-container {
+            max-width: 900px;
+            margin: 40px auto;
+        }
+        .header-banner {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a4ebd 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 40px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .step-card {
+            background: white;
+            border: 1px solid #e3e6f0;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            scroll-margin-top: 20px; /* 고유 ID 스크롤 이동 시 여백 확보 */
+        }
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .step-number {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: bold;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 14pt;
+        }
+        .step-title {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #212529;
+            display: inline-flex;
+            align-items: center;
+        }
+        .img-preview {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #eaecf4;
+            border-radius: 8px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            display: block;
+        }
+        .important-badge {
+            background-color: #dc3545;
+            color: white;
+            font-size: 9pt;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .admin-callout {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 40px;
+        }
+        .toast-container-custom {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container manual-container">
+    
+    <!-- 상단 타이틀 배너 -->
+    <div class="header-banner text-center">
+        <h1 class="fs-2 fw-bold mb-2"><i class="fa-solid fa-globe me-2"></i>내 상점 고유 도메인 연결 매뉴얼</h1>
+        <p class="lead mb-0 opacity-75">Cloudflare를 활용하여 평생 무료 SSL(자물쇠 인증서)과 고유 브랜드 도메인을 적용하세요.</p>
+    </div>
+
+    <!-- 안내 사항 -->
+    <div class="alert alert-info mb-4" role="alert">
+        <h4 class="alert-heading fw-bold fs-5"><i class="fa-solid fa-circle-info me-2"></i>시작하기 전 안내</h4>
+        <p class="mb-0 small">본 매뉴얼은 가비아, 고대디, 호스팅어 등 외부 등록기관에서 사장님께서 고유 도메인(예: <code>myshop.com</code>)을 이미 구매하셨다는 전제하에 진행됩니다. 9단계의 화면을 보고 천천히 따라 하시면 5분 만에 완료됩니다.</p>
+    </div>
+
+    <!-- 스텝 리스트 -->
+    <form id="manualForm" onsubmit="saveSetupProgress(event);">
+        
+        <!-- Step 1 -->
+        <div class="step-card" id="step1">
+            <div class="mb-3">
+                <span class="step-number">1</span>
+                <h3 class="step-title">시작 방식 선택 (Get Started)</h3>
+            </div>
+            <p class="text-secondary small">클라우드플레어 가입 및 로그인 후 첫 메인 화면이 나오면, 가운데에 있는 <strong>Protect apps and users</strong> (앱 및 사용자 보호) 카드를 클릭합니다.</p>
+            <img src="./images/KShops24_domain_manual_01.png" alt="Step 1 Image" class="img-preview">
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card" id="step2">
+            <div class="mb-3">
+                <span class="step-number">2</span>
+                <h3 class="step-title">보호 대상 선택 (Protect apps and users)</h3>
+            </div>
+            <p class="text-secondary small">화면에 나타나는 세 가지 카드 중, 맨 왼쪽에 있는 <strong>Public websites</strong> (공개 웹사이트) 카드를 클릭합니다.</p>
+            <img src="./images/KShops24_domain_manual_02.png" alt="Step 2 Image" class="img-preview">
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card" id="step3">
+            <div class="mb-3">
+                <span class="step-number">3</span>
+                <h3 class="step-title">연결 방식 선택 (Add a site)</h3>
+            </div>
+            <p class="text-secondary small">세 가지 메뉴 중, 맨 위에 있는 <strong>Connect a domain</strong> (도메인 연결) 메뉴를 클릭합니다.</p>
+            <img src="./images/KShops24_domain_manual_03.png" alt="Step 3 Image" class="img-preview">
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-card" id="step4">
+            <div class="mb-3">
+                <span class="step-number">4</span>
+                <h3 class="step-title">고유 도메인 주소 입력 (Connect your domain)</h3>
+            </div>
+            <div class="important-badge"><i class="fa-solid fa-triangle-exclamation me-1"></i>주의 및 필수 사항</div>
+            <p class="text-danger fw-bold small mb-2">Domain name 입력창에 주소를 적을 때 http://, https://, www.은 절대로 넣지 마세요!</p>
+            <p class="text-secondary small">오직 <strong>myshop.com</strong> 또는 <strong>myshop.ph</strong>처럼 순수 도메인 이름만 입력하셔야 에러 없이 다음 단계로 넘어갑니다. 입력 후 우측 하단의 파란색 <strong>Continue</strong> 버튼을 클릭합니다.</p>
+            <img src="./images/KShops24_domain_manual_04.png" alt="Step 4 Image" class="img-preview">
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step-card" id="step5">
+            <div class="mb-3">
+                <span class="step-number">5</span>
+                <h3 class="step-title">무료 요금제 선택 (Select a plan)</h3>
+            </div>
+            <p class="text-secondary small">요금제 카드들이 나열되면, 맨 왼쪽에 배치되어 있는 <strong>Free ($0)</strong> 카드 안의 파란색 <strong>Select plan</strong> 버튼을 클릭합니다. 신용카드 결제나 비용 청구가 전혀 없는 100% 평생 무료 플랜입니다.</p>
+            <img src="./images/KShops24_domain_manual_05.png" alt="Step 5 Image" class="img-preview">
+        </div>
+
+        <!-- Step 6 -->
+        <div class="step-card" id="step6">
+            <div class="mb-3">
+                <span class="step-number">6</span>
+                <h3 class="step-title">기존 기록 검토 (Review your DNS records)</h3>
+            </div>
+            <p class="text-secondary small">클라우드플레어가 기존 도메인의 네트워킹 기록을 자동으로 검색해 보여주는 화면입니다. 사장님들은 복잡한 표 안의 내용을 따로 수정하거나 건드릴 필요 없이, 맨 아래 좌측에 있는 파란색 <strong>Continue to activation</strong> (활성화 계속하기) 버튼을 클릭하여 바로 통과합니다.</p>
+            <img src="./images/KShops24_domain_manual_06.png" alt="Step 6 Image" class="img-preview">
+        </div>
+
+        <!-- Step 7 -->
+        <div class="step-card" id="step7">
+            <div class="mb-3">
+                <span class="step-number">7</span>
+                <h3 class="step-title">새로운 네임서버 주소 확인 (Update your nameservers)</h3>
+            </div>
+            <p class="text-secondary small">화면 중반 '2. Replace your current nameservers...' 영역을 확인하여 클라우드플레어가 배정한 <strong>새로운 네임서버 주소 2개</strong>를 복사합니다. (사장님들 계정마다 고유하게 지정됩니다.) 기존에 설정되어 있던 도메인 대행처의 주소(빨간색 X 표시)는 추후 교체 대상입니다.</p>
+            <img src="./images/KShops24_domain_manual_07a.png" alt="Step 7 Image" class="img-preview">
+        </div>
+
+        <!-- Step 8 -->
+        <div class="step-card" id="step8">
+            <div class="mb-3">
+                <span class="step-number">8</span>
+                <h3 class="step-title">도메인 구매처에 네임서버 변경 및 등록</h3>
+            </div>
+            <p class="text-secondary small">도메인을 최초로 구매하셨던 사이트(가비아, 고대디, 호스팅어 등)에 로그인하여 해당 도메인의 <strong>네임서버 변경/관리</strong> 메뉴로 진입합니다. 기존 주소들을 전부 삭제하고, 방금 7단계에서 복사한 <strong>새로운 클라우드플레어 네임서버 주소 2개</strong>를 1차와 2차 칸에 각각 정확히 입력하고 저장합니다.</p>
+            <img src="./images/KShops24_domain_manual_07b.png" alt="Step 8 Image" class="img-preview">
+        </div>
+
+        <!-- Step 9 -->
+        <div class="step-card" id="step9">
+            <div class="mb-3">
+                <span class="step-number">9</span>
+                <h3 class="step-title">활성화 최종 확인 및 전파 대기</h3>
+            </div>
+            <p class="text-secondary small">도메인 구매처에서 변경을 마쳤다면 다시 클라우드플레어 화면으로 돌아와 맨 아래에 있는 파란색 <strong>I updated my nameservers</strong> 버튼을 클릭합니다. 화면이 바뀌며 <strong>Waiting for your registrar to propagate...</strong> (네임서버 전파 대기 중) 문구가 표시되면 모든 설정이 완료된 것입니다. 완전히 연결될 때까지 약 10분~2시간 정도 소요됩니다.</p>
+            <img src="./images/KShops24_domain_manual_08a.png" alt="Step 9 Image 1" class="img-preview">
+            <img src="./images/KShops24_domain_manual_08b.png" alt="Step 9 Image 2" class="img-preview">
+        </div>
+
+        <!-- 저장 / 전송 버튼 섹션 -->
+        <div class="text-center my-5">
+            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow-sm">
+                <i class="fa-solid fa-check-to-slot me-2"></i>설정 완료 알림 및 저장
+            </button>
+        </div>
+    </form>
+
+    <!-- 관리자 안내 코웃 (찰리 전용 안내판) -->
+    <div class="admin-callout" id="adminNotice">
+        <h5 class="fw-bold text-dark"><i class="fa-solid fa-toolbox me-2"></i>플랫폼 관리자(Charlie) 최종 승인 단계</h5>
+        <p class="small text-muted mb-0">상점 사장님이 위 9단계를 마치고 승인 요청을 접수하면, 관리자는 호스팅어 hPanel의 [Parked Domains]에 해당 도메인을 등록하여 <code>public_html</code>을 함께 보게 하고, 데이터베이스 <code>shops</code> 테이블의 <code>custom_domain</code> 필드에 해당 도메인을 입력해 주시면 매핑 처리가 종결됩니다.</p>
+    </div>
+
+</div>
+
+<!-- 우측 하단 토스트 팝업 알림 -->
+<div class="toast-container-custom">
+    <div id="saveToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-bold">
+                <i class="fa-solid fa-circle-check me-2"></i>저장되었습니다.
+            </div>
+            <button type="button" class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/**
+ * 설정 저장 시 동작하는 스크립트
+ * 화면 깜빡임이 없는 부드러운 UI 핸들링과 스크롤 고정 적용
+ */
+function saveSetupProgress(event) {
+    event.preventDefault(); // 페이지 reload 방지 (AJAX 패턴 대응)
+    
+    // 부드러운 토스트 알림 노출
+    var toastEl = document.getElementById('saveToast');
+    var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    // 데이터를 제출하거나 화면 갱신 처리를 흉내 낼 때, 현재 활성화된 섹션(id="step9")으로 부드럽게 스크롤 강제 유지
+    const targetSection = document.getElementById('step9');
+    if (targetSection) {
+        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+</script>
+</body>
+</html>
