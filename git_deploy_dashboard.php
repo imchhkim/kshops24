@@ -7,6 +7,30 @@
  * 3. 각 단계 섹션(카드)에 고유 ID 주입 및 처리 후 스크롤 락인(Lock-in) 수렴.
  * 4. 화면 깜빡임이 전혀 없는 완벽한 AJAX(Fetch API) 기반 비동기 파이프라인.
  * 5. 우측 하단에 부드럽게 솟아오르는 Toast 팝업 시스템 버그 수정 및 내장.
+ * 
+ * 
+ * 🚀 Git Publishing 표준 명령어 세트 (Manual Reference)
+ * 이 명령어들은 /public_html/test_env 폴더 안에서 수행되는 논리적 순서입니다.
+ * 
+ * bash
+ * # 1단계: 내 컴퓨터(test_env)의 변경사항을 로컬 금고에 담기
+ * git add .
+ * git commit -m "수정 내용 요약"
+ *
+ * # 2단계: GitHub의 develop 방으로 안전하게 백업
+ * git push origin develop
+ *
+ * # 3단계: 배포 전용 방(main)으로 이동하여 합치고 쏘아 올리기 (Publishing 핵심)
+ * git checkout main
+ * # 혹시 모를 원격의 main과 내 main의 역사를 강제로 합치며 최신화
+ * git pull origin main --allow-unrelated-histories --no-edit 
+ * # 내가 작업한 develop 내용을 main에 병합 (Publishing 준비)
+ * git merge develop --allow-unrelated-histories --no-edit
+ * # GitHub의 main으로 Push! (이 순간 webhook.php가 가동되어 실서버가 갱신됩니다)
+ * git push origin main
+ *
+ * # 4단계: 다시 다음 작업을 위해 개발 방으로 복귀
+ * git checkout develop
  */
 
 // 🛡️ 0. 운영 서버 오작동 방지 (로컬 및 테스트 환경에서만 허용)
@@ -99,8 +123,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             
         case 'step3':
             // [3단계] 메인방 스위칭 ➡️ 무결점 병합 ➡️ 🌟실서버 자동 배포 웹훅 트리거
-            // 서로 다른 역사(unrelated histories)를 가진 브랜치라도 강제로 병합할 수 있도록 안전장치를 추가합니다.
-            $cmd = "cd {$base_dir} && git fetch origin main 2>&1 && (git checkout main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
+            // rebase/merge 설정 충돌을 방지하고, 역사가 다른 브랜치도 강제 병합하여 실서버 웹훅을 트리거합니다.
+            $cmd = "cd {$base_dir} && git config pull.rebase false 2>&1 && git config merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
             break;
             
         case 'step4':
