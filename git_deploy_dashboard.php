@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1130)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1200)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -474,15 +474,23 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         
         <div id="console-step4" class="console-log"></div>
         <div id="analysis-step4" class="analysis-box"></div>
+    </div>
 
-        <!-- [추가] 로컬 VS Code 동기화 가이드 (M, U 마커 제거용) -->
-        <div class="mt-4 p-3 border rounded-3 bg-light" id="local-sync-guide" style="display:none; border-left: 5px solid #10b981 !important;">
-            <div class="fw-bold text-dark small mb-2"><i class="bi bi-pc-display me-1"></i> 로컬 VS Code 상태 동기화 (M, U 마커 제거)</div>
-            <div class="text-muted" style="font-size: 0.75rem; line-height: 1.5;">
-                배포가 완료되었습니다! 이제 내 컴퓨터의 VS Code 터미널에서 아래 명령어를 실행하여 소스 제어 마커를 정리하세요.
-            </div>
-            <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin; git reset --hard origin/develop', '동기화 명령어')">git fetch origin; git reset --hard origin/develop <i class="bi bi-clipboard ms-1"></i></div>
-            <div class="small text-danger" style="font-size: 0.7rem;">* 주의: 로컬에만 작성 중인 미배포 코드가 있다면 모두 초기화됩니다.</div>
+    <!-- [개선] 5단계: 로컬 VS Code 동기화 가이드 (카드 레이아웃 통합) -->
+    <div id="section-step5" class="deploy-card" style="display:none; border-top: 4px solid #10b981;">
+        <div class="card-title">
+            <span class="step-badge" style="background-color: #10b981;">5단계</span>
+            <span>로컬 PC 작업 환경 최종 정화 (M, U 마커 제거)</span>
+        </div>
+        <div class="card-description">
+            서버 배포가 끝났지만 내 컴퓨터(VS Code)는 아직 그 사실을 모릅니다. 아래 명령어를 VS Code 터미널에 복사하여 실행하면 소스 제어 탭의 지저분한 마커들이 깨끗하게 정리됩니다.
+        </div>
+        <div class="success-criteria" style="background-color: #ecfdf5; color: #065f46;">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>완료 확인:</strong> VS Code 탐색기 파일 옆의 <b>M</b>(수정됨), <b>U</b>(추적안됨) 표시가 모두 사라져야 합니다.
+        </div>
+        <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin; git reset --hard origin/develop', '동기화 명령어')">git fetch origin; git reset --hard origin/develop <i class="bi bi-clipboard ms-2"></i></div>
+        <div class="small text-danger" style="font-size: 0.75rem;">
+            <i class="bi bi-exclamation-triangle me-1"></i> 주의: 로컬에만 임시로 작성 중인 코드가 있다면 사라지니 반드시 배포 완료 직후에만 수행하세요.
         </div>
     </div>
 
@@ -569,7 +577,7 @@ function runGitPipeline(step, sectionId) {
             document.getElementById('container-copy-all').style.display = 'block';
             // 4단계 완료 시 로컬 동기화 가이드 노출
             if (step === 'step4') {
-                document.getElementById('local-sync-guide').style.display = 'block';
+                document.getElementById('section-step5').style.display = 'block';
             }
             showToast('저장되었습니다. Git ' + step + ' 파이프라인 완료!', 'success');
         } else {
@@ -730,6 +738,19 @@ function copyAllLogs() {
     
     navigator.clipboard.writeText(allLogs).then(() => {
         showToast('전체 배포 결과가 클립보드에 저장되었습니다.', 'success');
+    });
+}
+
+/**
+ * [추가] 일반 텍스트 클립보드 복사 헬퍼
+ */
+function copyToClipboard(text, label) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(label + '가 복사되었습니다. VS Code에 붙여넣으세요!', 'success');
+    }).catch(err => {
+        // Fallback for older browsers
+        alert(label + ' 복사 실패. 수동으로 복사해주세요.');
     });
 }
 
