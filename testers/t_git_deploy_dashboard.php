@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1400)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1800)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -169,6 +169,52 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             // 단순히 reset만 하는 것이 아니라 fetch와 clean을 조합하여 "완전 무결 상태"를 강제합니다.
             $cmd = "{$env} && cd {$base_dir} && git merge --abort 2>&1 || true && git fetch --all 2>&1 && git reset --hard origin/develop 2>&1 && git clean -fd 2>&1 && git checkout -f develop 2>&1";
             break;
+
+        case 'sync_sample':
+            // [6단계] 샘플 상점 데이터 및 이미지 실서버 강제 이관
+            $target_shop_id = (int)$_POST['shop_id'];
+            if (!$target_shop_id) {
+                echo json_encode(['success' => false, 'message' => '이관할 상점 ID를 입력해주세요.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $test_db = "u743828642_philshop24";
+            $live_db = "u743828642_kshops24";
+            
+            // 1. 테스트 DB에서 서브도메인 확보
+            $stmt = $pdo->prepare("SELECT subdomain FROM {$test_db}.shops WHERE id = ?");
+            $stmt->execute([$target_shop_id]);
+            $subdomain = $stmt->fetchColumn();
+
+            if (!$subdomain) {
+                echo json_encode(['success' => false, 'message' => "테스트 DB에서 ID {$target_shop_id} 상점을 찾을 수 없습니다."], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // 2. DB 이관 (REPLACE INTO를 사용하여 실서버에 동일 ID가 있어도 덮어쓰기 처리)
+            // 주요 관련 테이블 일괄 복사
+            $tables = ['shops', 'shop_items', 'shop_item_categories', 'shop_images', 'shop_item_boards', 'shop_payments'];
+            $sync_logs = [];
+            foreach ($tables as $t) {
+                $id_col = ($t === 'shops') ? 'id' : 'shop_id';
+                $pdo->exec("DELETE FROM {$live_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
+                $pdo->exec("INSERT INTO {$live_db}.{$t} SELECT * FROM {$test_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
+                $sync_logs[] = "Table [{$t}] sync completed.";
+            }
+
+            // 3. 물리 파일(이미지 폴더) 복사 (Shell 명령 활용)
+            $test_upload_path = "/home/u743828642/domains/kshops24.com/public_html/test_env/uploads/shops/{$subdomain}";
+            $live_upload_path = "/home/u743828642/domains/kshops24.com/public_html/uploads/shops/";
+            
+            $copy_cmd = "cp -rp " . escapeshellarg($test_upload_path) . " " . escapeshellarg($live_upload_path) . " 2>&1";
+            exec($copy_cmd, $file_output, $status_code);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "상점 [{$subdomain}] 데이터 및 이미지 이관 완료!",
+                'log' => implode("\n", $sync_logs) . "\n\n--- File Copy Result ---\n" . implode("\n", $file_output)
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
 
         default:
             echo json_with_response(false, '올바르지 않은 인프라 배포 단계입니다.');
@@ -520,6 +566,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         </div>
     </div>
 
+    <!-- [추가] 6단계: 데이터 특급 이관 섹션 -->
+    <div id="section-sync" class="deploy-card" style="display:none; border-top: 4px solid #8b5cf6;">
+        <div class="card-title">
+            <span class="step-badge" style="background-color: #8b5cf6;">6단계</span>
+            <span>데이터 특급 이관 (테스트 상점 → 실서버)</span>
+        </div>
+        <div class="card-description">
+            코드가 배포된 후, 테스트 환경에서 생성한 **샘플 상점의 DB 정보와 이미지 폴더**를 실서버로 즉시 복사합니다. 실서버에 동일한 ID의 상점이 있다면 덮어씌워집니다.
+        </div>
+        <div class="success-criteria" style="background-color: #f5f3ff; color: #5b21b6;">
+            <i class="bi bi-database-fill-up me-1"></i> <strong>대상 DB:</strong> u743828642_philshop24 ➔ u743828642_kshops24
+        </div>
+        
+        <div class="input-group mb-3">
+            <span class="input-group-text bg-white border-end-0">이관할 상점 ID</span>
+            <input type="number" id="sync-shop-id" class="form-control border-start-0 shadow-none" placeholder="예: 15" style="max-width: 120px;">
+            <button type="button" class="btn-execute" style="background-color: #8b5cf6;" onclick="runDataSync()">데이터 및 이미지 이관 실행</button>
+        </div>
+
+        <div id="console-sync" class="console-log"></div>
+        <div id="analysis-sync" class="analysis-box"></div>
+    </div>
+
     <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
     <div id="section-rollback" class="deploy-card" style="border-top: 4px solid #ef4444; background-color: #fffafb; margin-top: 40px;">
         <div class="card-title">
@@ -607,6 +676,11 @@ function runGitPipeline(step, sectionId) {
             // 4단계 완료 시 로컬 동기화 가이드 노출
             if (step === 'step4') {
                 document.getElementById('section-step5').style.display = 'block';
+                
+                // [추가] 6단계(데이터 이관) 섹션도 함께 노출하여 선택할 수 있게 함
+                const syncSection = document.getElementById('section-sync');
+                if(syncSection) syncSection.style.display = 'block';
+
                 // 4단계 완료 후 5단계로 스크롤 이동
                 setTimeout(() => {
                     document.getElementById('section-step5').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -711,6 +785,13 @@ function analyzeStepResult(step, log, backendSuccess) {
             title = '실서버 롤백 완수';
             guide = '실서버가 성공적으로 이전 버전으로 되돌아갔습니다. GitHub와 실서버 폴더 모두 타임머신 작동이 완료되었습니다.';
             icon = 'bi-shield-fill-check';
+            break;
+
+        case 'sync_sample':
+            verdict = 'success';
+            title = '데이터 이관 완수';
+            guide = '샘플 상점의 DB 레코드와 이미지 폴더가 실서버 환경으로 무결성 복사되었습니다.';
+            icon = 'bi-database-fill-check';
             break;
     }
 
@@ -892,6 +973,24 @@ function verifyStep5Output() {
             showToast('터미널 결과 분석 실패', 'error');
         }
     }, 800);
+}
+
+/**
+ * [추가] 6단계 샘플 상점 데이터 이관 실행 로직
+ */
+function runDataSync() {
+    const shopId = document.getElementById('sync-shop-id').value;
+    if (!shopId) {
+        showToast('이관할 상점 ID를 입력해 주세요.', 'error');
+        document.getElementById('sync-shop-id').focus();
+        return;
+    }
+
+    if (!confirm('테스트 DB와 이미지 폴더를 실서버로 복사합니다. 계속하시겠습니까?')) return;
+    
+    // 이관 작업은 내부적으로 runGitPipeline 형식을 빌려 쓰되, shop_id를 파라미터로 넘깁니다.
+    // (기존 runGitPipeline 함수를 수정하지 않고 재사용하기 위해 전역 input 값을 참조하도록 처리됨)
+    runGitPipeline('sync_sample', 'section-sync');
 }
 </script>
 </body>

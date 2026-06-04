@@ -2,7 +2,9 @@
 .env
 .vscode/
 
-# K-Shops24 매장별 업로드 자산 및 캐시 유출 원천 차단
-../uploads/
+# 저장소 루트 기준의 uploads 폴더 제외 (앞에 /를 붙이면 현재 폴더 기준)
+/uploads/
+/test_env/
+
 .DS_Store
 Thumbs.db
