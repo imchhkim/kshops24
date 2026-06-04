@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1200)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1230)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -496,11 +496,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
 
     <!-- [추가] 전체 결과 복사 버튼 (모든 과정 완료 후 리포트용) -->
     <div class="text-center mb-5" id="container-copy-all" style="display:none;">
-        <button type="button" class="btn-execute" style="width:100%; background-color:#0f172a; padding:15px;" onclick="copyAllLogs()"><i class="bi bi-clipboard-data-fill me-2"></i>모든 단계 배포 결과 전체 복사</button>
+        <button type="button" class="btn-execute" style="width:100%; background-color:#0f172a; padding:15px;" onclick="copyAllLogs()"><i class="bi bi-clipboard-data-fill me-2"></i>1-4 단계 배포 결과 전체 복사</button>
     </div>
 
     <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
-    <div id="section-rollback" class="deploy-card" style="border-top: 4px solid #ef4444; background-color: #fffafb;">
+    <div id="section-rollback" class="deploy-card" style="border-top: 4px solid #ef4444; background-color: #fffafb; margin-top: 40px;">
         <div class="card-title">
             <span class="step-badge" style="background-color: #991b1b;">긴급 복구</span>
             <span style="color: #991b1b;">실서버 즉시 롤백 (이전 버전으로 복구)</span>
@@ -578,6 +578,10 @@ function runGitPipeline(step, sectionId) {
             // 4단계 완료 시 로컬 동기화 가이드 노출
             if (step === 'step4') {
                 document.getElementById('section-step5').style.display = 'block';
+                // 4단계 완료 후 5단계로 스크롤 이동
+                setTimeout(() => {
+                    document.getElementById('section-step5').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
             }
             showToast('저장되었습니다. Git ' + step + ' 파이프라인 완료!', 'success');
         } else {
