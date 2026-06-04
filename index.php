@@ -310,13 +310,13 @@ try {
             <a class="navbar-brand py-2" href="index.php">
                 <img src="/images/kshops24_logo04.png" alt="KShops24" style="height: 42px; width: auto; display: block;">
             </a>
-<!--
+
             <div class="d-flex align-items-center">
                 <a href="admin/admin_login.php" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3 me-2">
                     <i class="bi bi-box-arrow-in-right me-1"></i> 관리자 로그인
                 </a>
             </div>
--->
+
         </div>
     </nav>
 

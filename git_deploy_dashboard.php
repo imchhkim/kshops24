@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.1630)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.2200)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -141,10 +141,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
             
         case 'step3':
-            // [3단계] 메인방 이동 ➡️ develop 상태를 main에 강제 이식(무적 배포) ➡️ 🚀실서버 배포
-            // 일반 merge 대신 reset --hard를 사용하여 develop의 모든 내용을 main으로 강제 복사합니다.
-            // 이는 브랜치 간 역사가 꼬였을 때 발생하는 모든 충돌을 원천 차단하는 가장 확실한 배포 방식입니다.
-            $cmd = "{$env} && cd {$base_dir} && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard develop 2>&1 && git push origin main --force 2>&1";
+            // [3단계] 메인방 이동 ➡️ 무적 배포 ➡️ 🚀실서버 즉시 강제 동기화 (Zero-Lag)
+            // 1. GitHub로 push를 수행하고, 
+            // 2. 동일 서버 내의 실서버 폴더(/public_html)로 이동하여 즉시 강제 reset을 수행합니다.
+            // 이렇게 하면 GitHub 웹훅의 지연이나 실패에 상관없이 즉각적으로 실서버에 반영됩니다.
+            $live_dir = "/home/u743828642/domains/kshops24.com/public_html";
+            $deploy_cmd = "git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard develop 2>&1 && git push origin main --force 2>&1";
+            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1";
+            $cmd = "{$env} && cd {$base_dir} && {$deploy_cmd} && echo '\n--- [실서버 즉시 동기화 가동] ---\n' && {$sync_cmd}";
             break;
             
         case 'step4':
@@ -188,6 +192,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
 <head>
     <meta charset="UTF-8">
     <title><?php echo APP_STAGE_TITLE; ?></title>
+    <!-- [추가] 결과 복사 버튼용 아이콘 연동 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
         /* -----------------------------------------------------------------
          * 정갈한 무채색 계열의 모던 인프라 UI 테마 (중복 정의 배제 및 !important 금지)
@@ -291,6 +297,24 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         .btn-execute:hover {
             background-color: #334155;
         }
+        /* [추가] 결과 복사 버튼 스타일 */
+        .btn-copy {
+            background-color: #64748b;
+            color: #ffffff;
+            border: none;
+            padding: 11px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-left: 8px;
+            display: none; /* 로그 데이터가 존재할 때만 동적으로 노출 */
+            vertical-align: middle;
+        }
+        .btn-copy:hover {
+            background-color: #475569;
+        }
         /* 라이브 스트리밍 콘솔창 스펙 */
         .console-log {
             background-color: #0f172a;
@@ -353,6 +377,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         
         <input type="text" id="msg-step1" class="commit-input" value="<?php echo DEFAULT_COMMIT_MSG; ?>" placeholder="이번 배포 버전에 포스트잇으로 붙일 코멘트를 작성하세요.">
         <button type="button" class="btn-execute" onclick="runGitPipeline('step1', 'section-step1')">1단계 동기화 가동</button>
+        <button type="button" class="btn-copy" id="btn-copy-step1" onclick="copyStepLog('step1')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step1" class="console-log"></div>
     </div>
@@ -368,6 +393,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="cmd-preview">git push origin develop</div>
         
         <button type="button" class="btn-execute" onclick="runGitPipeline('step2', 'section-step2')">2단계 원격 백업 발송</button>
+        <button type="button" class="btn-copy" id="btn-copy-step2" onclick="copyStepLog('step2')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step2" class="console-log"></div>
     </div>
@@ -383,6 +409,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="cmd-preview">git checkout main && git merge develop --no-edit && git push origin main</div>
         
         <button type="button" class="btn-execute" onclick="runGitPipeline('step3', 'section-step3')">3단계 실서버 상용 배포 집행</button>
+        <button type="button" class="btn-copy" id="btn-copy-step3" onclick="copyStepLog('step3')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step3" class="console-log"></div>
     </div>
@@ -398,8 +425,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="cmd-preview">git checkout develop</div>
         
         <button type="button" class="btn-execute" onclick="runGitPipeline('step4', 'section-step4')">4단계 작업방 안전 복귀</button>
+        <button type="button" class="btn-copy" id="btn-copy-step4" onclick="copyStepLog('step4')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step4" class="console-log"></div>
+    </div>
+
+    <!-- [추가] 전체 결과 복사 버튼 (모든 과정 완료 후 리포트용) -->
+    <div class="text-center mb-5" id="container-copy-all" style="display:none;">
+        <button type="button" class="btn-execute" style="width:100%; background-color:#0f172a; padding:15px;" onclick="copyAllLogs()"><i class="bi bi-clipboard-data-fill me-2"></i>모든 단계 배포 결과 전체 복사</button>
     </div>
 
     <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
@@ -467,6 +500,11 @@ function runGitPipeline(step, sectionId) {
         
         // 지침 이행: 우측 하단 토스트 메시지 팝업 연동
         if (data.success) {
+            // 성공 시 해당 단계의 복사 버튼 및 하단 전체 복사 버튼 활성화
+            if(document.getElementById('btn-copy-' + step)) {
+                document.getElementById('btn-copy-' + step).style.display = 'inline-block';
+            }
+            document.getElementById('container-copy-all').style.display = 'block';
             showToast('저장되었습니다. Git ' + step + ' 파이프라인 완료!', 'success');
         } else {
             showToast('인프라 경고: 하단 로그 상수를 즉시 분석하세요.', 'error');
@@ -475,6 +513,49 @@ function runGitPipeline(step, sectionId) {
     .catch(error => {
         consoleBox.innerText = '백엔드 통신 치명적 에러: ' + error;
         showToast('네트워크 커넥션 체결 실패', 'error');
+    });
+}
+
+/**
+ * [추가] 특정 단계의 로그만 클립보드에 복사
+ */
+function copyStepLog(step) {
+    const log = document.getElementById('console-' + step).innerText;
+    if (!log || log.includes('인프라 파이프라인 가동 중')) return;
+    
+    navigator.clipboard.writeText(log).then(() => {
+        showToast(step.toUpperCase() + ' 단계 결과가 복사되었습니다.', 'success');
+    });
+}
+
+/**
+ * [추가] 모든 단계의 로그를 취합하여 리포트 형식으로 클립보드에 복사
+ */
+function copyAllLogs() {
+    const now = new Date().toLocaleString();
+    let allLogs = `[K-Shops24 배포 리포트 - ${now}]\n`;
+    allLogs += `------------------------------------------\n`;
+    
+    const steps = ['step1', 'step2', 'step3', 'step4'];
+    let hasAnyLog = false;
+    
+    steps.forEach(s => {
+        const log = document.getElementById('console-' + s).innerText;
+        // 실제 결과가 있는 경우만 리포트에 포함
+        if (log && !log.includes('인프라 파이프라인 가동 중') && !log.includes('반환된 아웃풋 로그 상수가 없습니다')) {
+            allLogs += `\n[${s.toUpperCase()} RESULT]\n${log}\n`;
+            allLogs += `------------------------------------------\n`;
+            hasAnyLog = true;
+        }
+    });
+    
+    if (!hasAnyLog) {
+        showToast('복사할 결과 데이터가 없습니다.', 'error');
+        return;
+    }
+    
+    navigator.clipboard.writeText(allLogs).then(() => {
+        showToast('전체 배포 결과가 클립보드에 저장되었습니다.', 'success');
     });
 }
 
