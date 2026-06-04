@@ -99,8 +99,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             
         case 'step3':
             // [3단계] 메인방 스위칭 ➡️ 무결점 병합 ➡️ 🌟실서버 자동 배포 웹훅 트리거
-            // 로컬에 main이 없어도 원격에서 찾아오도록(fetch) 보강하고 병합 전 최신화(pull)를 추가합니다.
-            $cmd = "cd {$base_dir} && git fetch origin main 2>&1 && (git checkout main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main 2>&1 && git merge develop --no-edit 2>&1 && git push origin main 2>&1";
+            // 서로 다른 역사(unrelated histories)를 가진 브랜치라도 강제로 병합할 수 있도록 안전장치를 추가합니다.
+            $cmd = "cd {$base_dir} && git fetch origin main 2>&1 && (git checkout main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
             break;
             
         case 'step4':

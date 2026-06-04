@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="utf-8" ?>
 <dwsync>
 <file name="index.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134154310981890720" remote="134154311190000000" />
@@ -9,4 +10,17 @@
 <file name="pre_register.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134153460274723435" remote="134153479010000000" />
 <file name="db_config.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134152962782826475" remote="134153479000000000" />
 <file name="shop_view.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134154311949504721" remote="134154312620000000" />
+=======
+<?xml version="1.0" encoding="utf-8" ?>
+<dwsync>
+<file name="index.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134154310981890720" remote="134154311190000000" />
+<file name="index.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/public_html/" local="134152963363551191" remote="134152964860000000" />
+<file name="db_config.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/public_html/" local="134152962782826475" remote="134152964850000000" />
+<file name="register.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/public_html/" local="134152964194656519" remote="134152964860000000" />
+<file name="register.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134153792347180136" remote="134153792350000000" />
+<file name="register_success.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134153482941909995" remote="134153482970000000" />
+<file name="pre_register.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134153460274723435" remote="134153479010000000" />
+<file name="db_config.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134152962782826475" remote="134153479000000000" />
+<file name="shop_view.php" server="194.163.35.198:65002//home/u743828642/domains/kshops24.com/" local="134154311949504721" remote="134154312620000000" />
+>>>>>>> e04269f51dc7843a6d850f7c2f789be87b1eb50e
 </dwsync>
