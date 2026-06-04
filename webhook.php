@@ -32,7 +32,9 @@ $target_dir = '/home/u743828642/domains/kshops24.com/public_html';
 // 실서버 폴더로 이동하여 main 브랜치의 최신 무결점 코드를 1초 만에 당겨옵니다.
 $output = [];
 $return_var = 0;
-exec("cd {$target_dir} && git pull origin main --no-edit 2>&1", $output, $return_var);
+// [보안 강화] pull 대신 fetch & reset --hard를 사용하여 실서버 코드를 GitHub(origin/main)과 100% 강제 동기화합니다.
+// 이는 실서버에서 발생할 수 있는 의도치 않은 코드 꼬임이나 충돌 마커 발생을 원천 차단하는 가장 안전한 방식입니다.
+exec("cd {$target_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1", $output, $return_var);
 
 // 4. 배포 로그 기록 (디버깅용)
 if ($return_var === 0) {

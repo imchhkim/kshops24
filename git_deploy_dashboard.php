@@ -7,30 +7,33 @@
  * 3. 각 단계 섹션(카드)에 고유 ID 주입 및 처리 후 스크롤 락인(Lock-in) 수렴.
  * 4. 화면 깜빡임이 전혀 없는 완벽한 AJAX(Fetch API) 기반 비동기 파이프라인.
  * 5. 우측 하단에 부드럽게 솟아오르는 Toast 팝업 시스템 버그 수정 및 내장.
- * 
- * 
- * 🚀 Git Publishing 표준 명령어 세트 (Manual Reference)
- * 이 명령어들은 /public_html/test_env 폴더 안에서 수행되는 논리적 순서입니다.
- * 
- * bash
- * # 1단계: 내 컴퓨터(test_env)의 변경사항을 로컬 금고에 담기
- * git add .
- * git commit -m "수정 내용 요약"
  *
- * # 2단계: GitHub의 develop 방으로 안전하게 백업
- * git push origin develop
+ * -------------------------------------------------------------------------
+ * 🚀 K-Shops24 표준 배포 매뉴얼 (Git Publishing SOP)
+ * -------------------------------------------------------------------------
+ * [작업 위치: /public_html/test_env (독립 저장소)]
  *
- * # 3단계: 배포 전용 방(main)으로 이동하여 합치고 쏘아 올리기 (Publishing 핵심)
- * git checkout main
- * # 혹시 모를 원격의 main과 내 main의 역사를 강제로 합치며 최신화
- * git pull origin main --allow-unrelated-histories --no-edit 
- * # 내가 작업한 develop 내용을 main에 병합 (Publishing 준비)
- * git merge develop --allow-unrelated-histories --no-edit
- * # GitHub의 main으로 Push! (이 순간 webhook.php가 가동되어 실서버가 갱신됩니다)
- * git push origin main
+ * 1. 로컬 락인: git add . && git commit -m "설명"
+ * 2. 원격 백업: git push origin develop
+ * 3. 상용 배포: git checkout main
+ *             git pull origin main --allow-unrelated-histories --no-edit
+ *             git merge develop --allow-unrelated-histories --no-edit
+ *             git push origin main (🚀 웹훅 트리거)
+ * 4. 개발 복귀: git checkout develop
  *
- * # 4단계: 다시 다음 작업을 위해 개발 방으로 복귀
- * git checkout develop
+ * -------------------------------------------------------------------------
+ * 🛠️ 긴급 유지보수 명령어 (Reference)
+ * -------------------------------------------------------------------------
+ * - 상용 배포 제외(Clean Deploy) 처리:
+ *   git rm -r --cached testers/ uploads/ schema.sql *.txt *.md *.json
+ *   git commit -m "배포 제외 목록 정리" && git push origin develop
+ *
+ * - 실서버 환경 강제 동기화 (Webhook 수동 시뮬레이션):
+ *   cd /public_html && git fetch origin main && git reset --hard origin/main
+ *
+ * - SSH 자격 증명(Token) 영구 저장:
+ *   git config --global credential.helper store
+ * -------------------------------------------------------------------------
  */
 
 // 🛡️ 0. 운영 서버 오작동 방지 (로컬 및 테스트 환경에서만 허용)
@@ -87,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.1110)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -115,8 +118,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     // 안전한 명령어 실행을 위한 쉘 환경 락인 및 줄바꿈 상숫값 대응
     switch ($step) {
         case 'step1':
-            // [1단계] 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
-            $cmd = "{$env} && cd {$base_dir} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
+            // [안전장치] 커밋 전 충돌 마커(<<<<<<< HEAD) 존재 여부 전수 검사
+            // 대시보드 파일 및 배포 제외 대상인 문서 파일(*.txt, *.md)은 검사에서 제외하여 불필요한 차단을 방지합니다.
+            $conflict_check = "grep -rl '<<<<<<< HEAD' . --exclude='git_deploy_dashboard.php' --exclude='*.txt' --exclude='*.md' 2>&1";
+            $conflict_files = [];
+            exec("cd {$base_dir} && {$conflict_check}", $conflict_files);
+            if (!empty($conflict_files)) {
+                echo json_encode(['success' => false, 'message' => '🚨 파일 내부에 충돌 마커가 발견되었습니다. 해당 파일들을 수정하기 전에는 커밋할 수 없습니다.', 'log' => "충돌 발생 파일 목록:\n" . implode("\n", $conflict_files)], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // [1단계] 배포 제외 대상 강제 세척(Sanitize) ➡️ 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
+            // 🛡️ 개발 유틸리티(_notes) 및 설정 파일들을 배포 대상에서 원천 차단합니다. (manuals 폴더는 상점주 교육용으로 유지)
+            $cleanup = "git rm -r --cached testers/ uploads/ schema.sql *.txt *.md *.MD *.json .vscode/ _notes/ 2>&1 || true";
+            $cmd = "{$env} && cd {$base_dir} && {$cleanup} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
             break;
             
         case 'step2':
@@ -125,9 +140,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
             
         case 'step3':
-            // [3단계] 메인방 스위칭 ➡️ 무결점 병합 ➡️ 🌟실서버 자동 배포 웹훅 트리거
-            // -f (force) 옵션을 추가하여 로컬의 소소한 변경사항 때문에 배포가 중단되는 현상을 방지합니다.
-            $cmd = "{$env} && cd {$base_dir} && git config --local pull.rebase false 2>&1 && git config --local merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
+            // [3단계] 메인방 이동 ➡️ 강제 초기화(무결점 보장) ➡️ 병합 ➡️ 🚀실서버 배포
+            // pull 대신 fetch & reset을 사용하여 main 브랜치의 무결성을 먼저 확보합니다.
+            $cmd = "{$env} && cd {$base_dir} && git config --local pull.rebase false 2>&1 && git config --local merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard origin/main 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
             break;
             
         case 'step4':
@@ -135,6 +150,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             $cmd = "{$env} && cd {$base_dir} && git checkout -f develop 2>&1";
             break;
             
+        case 'rollback':
+            // [긴급] 실서버 배포 취소: main 브랜치를 이전 커밋으로 되돌리고 강제 푸시
+            $cmd = "{$env} && cd {$base_dir} && git checkout -f main 2>&1 && git reset --hard HEAD~1 2>&1 && git push origin main --force 2>&1 && git checkout -f develop 2>&1";
+            break;
+
+        case 'emergency_reset':
+            // [긴급] 로컬 환경 완전 세척: 머지 중단 -> 원격 최신본 확보 -> 강제 덮어쓰기 -> 찌꺼기 파일 제거
+            // 단순히 reset만 하는 것이 아니라 fetch와 clean을 조합하여 "완전 무결 상태"를 강제합니다.
+            $cmd = "{$env} && cd {$base_dir} && git merge --abort 2>&1 || true && git fetch --all 2>&1 && git reset --hard origin/develop 2>&1 && git clean -fd 2>&1 && git checkout -f develop 2>&1";
+            break;
+
         default:
             echo json_with_response(false, '올바르지 않은 인프라 배포 단계입니다.');
             exit;
@@ -372,6 +398,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-execute" onclick="runGitPipeline('step4', 'section-step4')">4단계 작업방 안전 복귀</button>
         
         <div id="console-step4" class="console-log"></div>
+    </div>
+
+    <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
+    <div id="section-rollback" class="deploy-card" style="border-top: 4px solid #ef4444; background-color: #fffafb;">
+        <div class="card-title">
+            <span class="step-badge" style="background-color: #991b1b;">긴급 복구</span>
+            <span style="color: #991b1b;">실서버 즉시 롤백 (이전 버전으로 복구)</span>
+        </div>
+        <div class="card-description">
+            실서버(`main`)에 치명적인 문제가 발생했을 때 사용합니다. **가장 최근 배포를 취소**하고 실서버를 1단계 전으로 즉시 되돌립니다.
+        </div>
+        <button type="button" class="btn-execute" style="background-color: #ef4444;" onclick="if(confirm('정말로 실서버를 이전 상태로 되돌리겠습니까?')) runGitPipeline('rollback', 'section-rollback')">🚨 실서버 즉시 복구 실행</button>
+        <div id="console-rollback" class="console-log"></div>
+    </div>
+
+    <!-- [추가] 로컬 환경 초기화 섹션 -->
+    <div id="section-reset" class="deploy-card" style="border-top: 4px solid #64748b; background-color: #f8fafc;">
+        <div class="card-title">
+            <span class="step-badge" style="background-color: #64748b;">환경 정비</span>
+            <span>테스트 서버 코드 꼬임 강제 해결</span>
+        </div>
+        <div class="card-description">
+            사이트에 `<<<<<<< HEAD` 같은 문구가 보이거나 배포가 꼬였을 때 사용합니다. **현재 수정 중인 내용을 모두 파기**하고 가장 최근의 성공적인 `develop` 상태로 되돌립니다.
+        </div>
+        <button type="button" class="btn-execute" style="background-color: #64748b;" onclick="if(confirm('모든 수정사항을 버리고 깨끗한 상태로 되돌리시겠습니까?')) runGitPipeline('emergency_reset', 'section-reset')">🧹 로컬 환경 초기화 실행</button>
+        <div id="console-emergency_reset" class="console-log"></div>
     </div>
 </div>
 
