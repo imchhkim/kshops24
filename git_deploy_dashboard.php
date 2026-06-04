@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.2300)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1030)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -297,6 +297,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         .btn-execute:hover {
             background-color: #334155;
         }
+        /* [추가] 성공 기준 안내 텍스트 스타일 */
+        .success-criteria {
+            font-size: 0.75rem;
+            color: #3b82f6;
+            background-color: #eff6ff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
         /* [추가] 결과 복사 버튼 스타일 */
         .btn-copy {
             background-color: #64748b;
@@ -373,6 +382,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="card-description">
             현재 수정 중인 소스코드의 작업실 상태를 확인하고, 배송 상자에 담아 내 로컬 안전지대 금고에 정식 버전으로 커밋을 집행합니다.
         </div>
+        <div class="success-criteria">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>성공 메시지:</strong> <code>[develop {해시값}]</code> 또는 <code>커밋할 사항 없음, 작업 폴더 깨끗함</code>
+        </div>
         <div class="cmd-preview">git status && git add . && git commit -m "코멘트"</div>
         
         <input type="text" id="msg-step1" class="commit-input" value="<?php echo DEFAULT_COMMIT_MSG; ?>" placeholder="이번 배포 버전에 포스트잇으로 붙일 코멘트를 작성하세요.">
@@ -390,6 +402,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="card-description">
             내 컴퓨터 금고에 보관된 개발 진척도를 인터넷 세상인 GitHub 원격 저장소 `develop` 브랜치 방으로 쏘아 올려 안전하게 키핑합니다.
         </div>
+        <div class="success-criteria">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>성공 메시지:</strong> <code>Everything up-to-date</code> 또는 <code>develop -> develop</code>
+        </div>
         <div class="cmd-preview">git push origin develop</div>
         
         <button type="button" class="btn-execute" onclick="runGitPipeline('step2', 'section-step2')">2단계 원격 백업 발송</button>
@@ -405,6 +420,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         </div>
         <div class="card-description">
             배포 전용 방인 `main`으로 이동한 뒤 `develop` 코드를 무결성 병합하고, GitHub로 쏘아 올리는 즉시 실서버 배포 웹훅 사령탑을 노크하여 상용 서버를 1초 만에 자동 갱신합니다.
+        </div>
+        <div class="success-criteria">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>성공 메시지:</strong> <code>main -> main (forced update)</code> 및 <code>HEAD의 현재 위치는...</code>
         </div>
         <div class="cmd-preview">git checkout main && git merge develop --no-edit && git push origin main</div>
         
@@ -422,6 +440,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="card-description">
             실서버 라이브 배포 프로세스가 완료되었으므로, 실서버에 아무런 영향을 주지 않고 다음 AJAX 기능 개발을 이어갈 수 있는 안전 구역 방으로 다시 후퇴합니다.
         </div>
+        <div class="success-criteria">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>성공 메시지:</strong> <code>'develop' 브랜치로 전환합니다</code>
+        </div>
         <div class="cmd-preview">git checkout develop</div>
         
         <button type="button" class="btn-execute" onclick="runGitPipeline('step4', 'section-step4')">4단계 작업방 안전 복귀</button>
@@ -435,7 +456,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             <div class="text-muted" style="font-size: 0.75rem; line-height: 1.5;">
                 배포가 완료되었습니다! 이제 내 컴퓨터의 VS Code 터미널에서 아래 명령어를 실행하여 소스 제어 마커를 정리하세요.
             </div>
-            <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin && git reset --hard origin/develop', '동기화 명령어')">git fetch origin && git reset --hard origin/develop <i class="bi bi-clipboard ms-1"></i></div>
+            <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin; git reset --hard origin/develop', '동기화 명령어')">git fetch origin; git reset --hard origin/develop <i class="bi bi-clipboard ms-1"></i></div>
             <div class="small text-danger" style="font-size: 0.7rem;">* 주의: 로컬에만 작성 중인 미배포 코드가 있다면 모두 초기화됩니다.</div>
         </div>
     </div>
