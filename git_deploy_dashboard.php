@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.2200)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.2300)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -428,6 +428,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-copy" id="btn-copy-step4" onclick="copyStepLog('step4')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step4" class="console-log"></div>
+
+        <!-- [추가] 로컬 VS Code 동기화 가이드 (M, U 마커 제거용) -->
+        <div class="mt-4 p-3 border rounded-3 bg-light" id="local-sync-guide" style="display:none; border-left: 5px solid #10b981 !important;">
+            <div class="fw-bold text-dark small mb-2"><i class="bi bi-pc-display me-1"></i> 로컬 VS Code 상태 동기화 (M, U 마커 제거)</div>
+            <div class="text-muted" style="font-size: 0.75rem; line-height: 1.5;">
+                배포가 완료되었습니다! 이제 내 컴퓨터의 VS Code 터미널에서 아래 명령어를 실행하여 소스 제어 마커를 정리하세요.
+            </div>
+            <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin && git reset --hard origin/develop', '동기화 명령어')">git fetch origin && git reset --hard origin/develop <i class="bi bi-clipboard ms-1"></i></div>
+            <div class="small text-danger" style="font-size: 0.7rem;">* 주의: 로컬에만 작성 중인 미배포 코드가 있다면 모두 초기화됩니다.</div>
+        </div>
     </div>
 
     <!-- [추가] 전체 결과 복사 버튼 (모든 과정 완료 후 리포트용) -->
@@ -472,10 +482,11 @@ function runGitPipeline(step, sectionId) {
     const consoleBox = document.getElementById('console-' + step);
     const commitMsgInput = document.getElementById('msg-step1');
     const commitMessage = commitMsgInput ? commitMsgInput.value : '';
+    const startTime = new Date().toLocaleTimeString();
     
     // 콘솔창을 초기 세척하고 부드럽게 활성화
     consoleBox.style.display = 'block';
-    consoleBox.innerText = '인프라 파이프라인 가동 중... 호스팅어 리눅스 쉘 제어 커넥션을 맺는 중입니다.\n';
+    consoleBox.innerText = `[${startTime}] 인프라 파이프라인 가동 중... 호스팅어 리눅스 쉘 제어 커넥션을 맺는 중입니다.\n`;
     
     // 전송 데이터 직렬화 상숫값 매핑
     const formData = new FormData();
@@ -505,6 +516,10 @@ function runGitPipeline(step, sectionId) {
                 document.getElementById('btn-copy-' + step).style.display = 'inline-block';
             }
             document.getElementById('container-copy-all').style.display = 'block';
+            // 4단계 완료 시 로컬 동기화 가이드 노출
+            if (step === 'step4') {
+                document.getElementById('local-sync-guide').style.display = 'block';
+            }
             showToast('저장되었습니다. Git ' + step + ' 파이프라인 완료!', 'success');
         } else {
             showToast('인프라 경고: 하단 로그 상수를 즉시 분석하세요.', 'error');
