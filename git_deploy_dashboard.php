@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1030)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1130)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -321,6 +321,27 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             display: none; /* 로그 데이터가 존재할 때만 동적으로 노출 */
             vertical-align: middle;
         }
+        /* [추가] 사령탑 결과 판독 결과 박스 스타일 */
+        .analysis-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+        .analysis-title {
+            font-weight: 800;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .verdict-success { background-color: #ecfdf5; border: 1px solid #10b981; color: #065f46; }
+        .verdict-error { background-color: #fef2f2; border: 1px solid #ef4444; color: #991b1b; }
+        .verdict-warning { background-color: #fffbeb; border: 1px solid #f59e0b; color: #92400e; }
+        .guide-text {
+            line-height: 1.5;
+        }
         .btn-copy:hover {
             background-color: #475569;
         }
@@ -392,6 +413,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-copy" id="btn-copy-step1" onclick="copyStepLog('step1')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step1" class="console-log"></div>
+        <div id="analysis-step1" class="analysis-box"></div>
     </div>
 
     <div id="section-step2" class="deploy-card">
@@ -411,6 +433,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-copy" id="btn-copy-step2" onclick="copyStepLog('step2')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step2" class="console-log"></div>
+        <div id="analysis-step2" class="analysis-box"></div>
     </div>
 
     <div id="section-step3" class="deploy-card">
@@ -430,6 +453,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-copy" id="btn-copy-step3" onclick="copyStepLog('step3')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step3" class="console-log"></div>
+        <div id="analysis-step3" class="analysis-box"></div>
     </div>
 
     <div id="section-step4" class="deploy-card">
@@ -449,6 +473,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <button type="button" class="btn-copy" id="btn-copy-step4" onclick="copyStepLog('step4')"><i class="bi bi-clipboard-check"></i> 결과 복사</button>
         
         <div id="console-step4" class="console-log"></div>
+        <div id="analysis-step4" class="analysis-box"></div>
 
         <!-- [추가] 로컬 VS Code 동기화 가이드 (M, U 마커 제거용) -->
         <div class="mt-4 p-3 border rounded-3 bg-light" id="local-sync-guide" style="display:none; border-left: 5px solid #10b981 !important;">
@@ -502,6 +527,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
 function runGitPipeline(step, sectionId) {
     const consoleBox = document.getElementById('console-' + step);
     const commitMsgInput = document.getElementById('msg-step1');
+    const analysisBox = document.getElementById('analysis-' + step);
     const commitMessage = commitMsgInput ? commitMsgInput.value : '';
     const startTime = new Date().toLocaleTimeString();
     
@@ -531,11 +557,15 @@ function runGitPipeline(step, sectionId) {
         }
         
         // 지침 이행: 우측 하단 토스트 메시지 팝업 연동
+        // 사령탑의 지능형 결과 분석 가동
+        analyzeStepResult(step, data.log, data.success);
+
         if (data.success) {
             // 성공 시 해당 단계의 복사 버튼 및 하단 전체 복사 버튼 활성화
             if(document.getElementById('btn-copy-' + step)) {
                 document.getElementById('btn-copy-' + step).style.display = 'inline-block';
             }
+            
             document.getElementById('container-copy-all').style.display = 'block';
             // 4단계 완료 시 로컬 동기화 가이드 노출
             if (step === 'step4') {
@@ -550,6 +580,114 @@ function runGitPipeline(step, sectionId) {
         consoleBox.innerText = '백엔드 통신 치명적 에러: ' + error;
         showToast('네트워크 커넥션 체결 실패', 'error');
     });
+}
+
+/**
+ * [사령탑 인공지능] 각 단계별 로그를 분석하여 성공 여부 판독 및 가이드 제시
+ */
+function analyzeStepResult(step, log, backendSuccess) {
+    const analysisBox = document.getElementById('analysis-' + step);
+    if (!analysisBox) return;
+    
+    let verdict = 'error'; // success, error, warning
+    let title = '';
+    let guide = '';
+    let icon = 'bi-exclamation-octagon-fill';
+
+    const lowerLog = log.toLowerCase();
+
+    switch (step) {
+        case 'step1':
+            if (log.includes('[develop') || log.includes('nothing to commit') || log.includes('작업 폴더 깨끗함')) {
+                verdict = 'success';
+                title = '로컬 락인 성공';
+                guide = '작업 내용이 안전하게 로컬 저장소에 반영되었습니다. 이제 2단계로 진행하세요.';
+                icon = 'bi-check-circle-fill';
+            } else {
+                title = '로컬 락인 확인 필요';
+                guide = '로그를 확인해 주세요. 파일 수정 사항이 없거나 Git 설정 확인이 필요할 수 있습니다.';
+            }
+            break;
+            
+        case 'step2':
+            if (log.includes('develop -> develop') || log.includes('Everything up-to-date')) {
+                verdict = 'success';
+                title = '원격 백업 성공';
+                guide = 'GitHub 원격 금고로 전송이 완료되었습니다. 이제 실서버 배포(3단계)가 가능합니다.';
+                icon = 'bi-check-circle-fill';
+            } else if (log.includes('rejected') || log.includes('non-fast-forward')) {
+                verdict = 'error';
+                title = '원격지 역사 충돌';
+                guide = 'GitHub와 로컬의 역사가 다릅니다. 터미널에서 <code>git push origin develop --force</code> 를 실행하거나 [환경 정비] 버튼을 사용하세요.';
+            } else {
+                title = '전송 실패';
+                guide = '인터넷 연결 또는 GitHub 권한(Token)을 확인해 주세요.';
+            }
+            break;
+            
+        case 'step3':
+            const hasMainPush = log.includes('main -> main');
+            const hasSync = log.includes('--- [실서버 즉시 동기화 가동] ---') && log.includes('HEAD의 현재 위치는');
+            
+            if (hasMainPush && hasSync) {
+                verdict = 'success';
+                title = '실서버 라이브 배포 완수';
+                guide = 'GitHub 전송과 실서버 즉시 동기화가 모두 성공했습니다! 이제 사이트(kshops24.com)에서 확인하세요.';
+                icon = 'bi-rocket-takeoff-fill';
+            } else if (log.includes('CONFLICT')) {
+                verdict = 'error';
+                title = '병합 대충돌 발생';
+                guide = '파일 간 충돌이 발생했습니다. 사이트가 깨졌을 수 있으니 즉시 [환경 정비] 또는 [긴급 복구]를 실행하세요!';
+            } else {
+                title = '부분적 배포 성공 (확인 필요)';
+                guide = 'GitHub 전송은 되었으나 실서버 동기화 로그가 불분명합니다. 사이트 반영 여부를 직접 체크하세요.';
+                verdict = 'warning';
+                icon = 'bi-exclamation-triangle-fill';
+            }
+            break;
+            
+        case 'step4':
+            if (log.includes("'develop' 브랜치로 전환") || log.includes("Already on 'develop'")) {
+                verdict = 'success';
+                title = '안전 지대 복귀 완료';
+                guide = '배포 모드가 종료되고 개발 모드로 돌아왔습니다. 하단의 가이드에 따라 VS Code 동기화를 진행하세요.';
+                icon = 'bi-house-heart-fill';
+            } else {
+                title = '브랜치 이동 실패';
+                guide = '현재 여전히 main 브랜치일 수 있습니다. 터미널에서 <code>git checkout develop</code>을 시도하세요.';
+            }
+            break;
+            
+        case 'emergency_reset':
+            verdict = 'success';
+            title = '환경 정화 완료';
+            guide = '모든 꼬인 상태를 강제 종료하고 원격 저장소 기준으로 초기화했습니다. 다시 1단계부터 시작할 수 있습니다.';
+            icon = 'bi-stars';
+            break;
+    }
+
+    // 백엔드 자체 status_code가 에러인 경우 강제 에러 처리
+    if (!backendSuccess && verdict === 'success') {
+        verdict = 'error';
+        title = '시스템 내부 오류';
+        guide = 'Git 명령어 실행 중 오류가 발생했습니다. 로그 내용을 정밀 분석해야 합니다.';
+        icon = 'bi-bug-fill';
+    }
+
+    // 분석 결과 렌더링
+    analysisBox.className = `analysis-box verdict-${verdict}`;
+    analysisBox.innerHTML = `
+        <div class="analysis-title">
+            <i class="bi ${icon}"></i> ${title}
+        </div>
+        <div class="guide-text">
+            ${guide}
+        </div>
+    `;
+    analysisBox.style.display = 'block';
+    
+    // 분석 결과로 스크롤 이동
+    analysisBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 /**
