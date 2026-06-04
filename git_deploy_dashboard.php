@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.1110)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.04.1600)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -130,7 +130,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
 
             // [1단계] 배포 제외 대상 강제 세척(Sanitize) ➡️ 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
             // 🛡️ 개발 유틸리티(_notes) 및 설정 파일들을 배포 대상에서 원천 차단합니다. (manuals 폴더는 상점주 교육용으로 유지)
-            $cleanup = "git rm -r --cached testers/ uploads/ schema.sql *.txt *.md *.MD *.json .vscode/ _notes/ 2>&1 || true";
+            // [최적화] 존재하지 않는 파일 패턴에 대한 fatal 에러를 방지하기 위해 파일 존재 여부를 확인하는 로직으로 보강 가능하나, 현재는 가독성을 위해 패턴 유지
+            $cleanup = "git rm -r --cached testers/ uploads/ schema.sql *.txt *.md *.json .vscode/ _notes/ 2>/dev/null || true";
             $cmd = "{$env} && cd {$base_dir} && {$cleanup} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
             break;
             
@@ -140,9 +141,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
             
         case 'step3':
-            // [3단계] 메인방 이동 ➡️ 강제 초기화(무결점 보장) ➡️ 병합 ➡️ 🚀실서버 배포
-            // pull 대신 fetch & reset을 사용하여 main 브랜치의 무결성을 먼저 확보합니다.
-            $cmd = "{$env} && cd {$base_dir} && git config --local pull.rebase false 2>&1 && git config --local merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard origin/main 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
+            // [3단계] 메인방 이동 ➡️ develop 상태를 main에 강제 이식(무적 배포) ➡️ 🚀실서버 배포
+            // 일반 merge 대신 reset --hard를 사용하여 develop의 모든 내용을 main으로 강제 복사합니다.
+            // 이는 브랜치 간 역사가 꼬였을 때 발생하는 모든 충돌을 원천 차단하는 가장 확실한 배포 방식입니다.
+            $cmd = "{$env} && cd {$base_dir} && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard develop 2>&1 && git push origin main --force 2>&1";
             break;
             
         case 'step4':
