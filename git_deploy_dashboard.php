@@ -109,27 +109,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     // 웹 서버 프로세스가 실행되는 위치를 현재 디렉토리로 명확히 강제 고정 (매우 중요)
     $base_dir = escapeshellarg(__DIR__);
     
+    // 🛡️ 호스팅어 서버 환경 변수 강제 주입 (인증 정보 및 한글 깨짐 방지)
+    $env = "export HOME=/home/u743828642 && export LANG=ko_KR.UTF-8";
+    
     // 안전한 명령어 실행을 위한 쉘 환경 락인 및 줄바꿈 상숫값 대응
     switch ($step) {
         case 'step1':
             // [1단계] 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
-            $cmd = "cd {$base_dir} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
+            $cmd = "{$env} && cd {$base_dir} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
             break;
             
         case 'step2':
             // [2단계] 인터넷 금고 develop 방으로 원격 백업 트럭 발송
-            $cmd = "cd {$base_dir} && git push origin develop 2>&1";
+            $cmd = "{$env} && cd {$base_dir} && git push origin develop 2>&1";
             break;
             
         case 'step3':
             // [3단계] 메인방 스위칭 ➡️ 무결점 병합 ➡️ 🌟실서버 자동 배포 웹훅 트리거
-            // rebase/merge 설정 충돌을 방지하고, 역사가 다른 브랜치도 강제 병합하여 실서버 웹훅을 트리거합니다.
-            $cmd = "cd {$base_dir} && git config pull.rebase false 2>&1 && git config merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
+            // -f (force) 옵션을 추가하여 로컬의 소소한 변경사항 때문에 배포가 중단되는 현상을 방지합니다.
+            $cmd = "{$env} && cd {$base_dir} && git config --local pull.rebase false 2>&1 && git config --local merge.ours.driver true 2>&1 && git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git pull origin main --allow-unrelated-histories --no-edit 2>&1 && git merge develop --allow-unrelated-histories --no-edit 2>&1 && git push origin main 2>&1";
             break;
             
         case 'step4':
             // [4단계] 다음 개발 스케줄러 소화를 위해 안전 구역 안전 복귀
-            $cmd = "cd {$base_dir} && git checkout develop 2>&1";
+            $cmd = "{$env} && cd {$base_dir} && git checkout -f develop 2>&1";
             break;
             
         default:
@@ -142,7 +145,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     $result_text = implode("\n", $output);
     
     // 에러 분기 무결성 대조 (보통 git commit 시 바뀐 게 없으면 에러코드를 뱉으므로 내용 매핑 필요)
-    $is_success = ($status_code === 0 || strpos($result_text, 'nothing to commit') !== false || strpos($result_text, 'Already up to date') !== false);
+    $is_success = ($status_code === 0 || strpos($result_text, 'nothing to commit') !== false || strpos($result_text, 'Already up to date') !== false || strpos($result_text, 'Everything up-to-date') !== false);
     
     echo json_encode([
         'success' => $is_success,
