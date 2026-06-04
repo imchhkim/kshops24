@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1230)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1300)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -476,27 +476,45 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div id="analysis-step4" class="analysis-box"></div>
     </div>
 
-    <!-- [개선] 5단계: 로컬 VS Code 동기화 가이드 (카드 레이아웃 통합) -->
+    <!-- [추가] 1-4단계 배포 결과 전체 복사 버튼 (4단계 직후 배치) -->
+    <div class="text-center mb-5" id="container-copy-all" style="display:none; margin-top: -10px; margin-bottom: 40px !important;">
+        <button type="button" class="btn-execute" style="width:100%; background-color:#0f172a; padding:18px;" onclick="copyAllLogs()">
+            <i class="bi bi-clipboard-data-fill me-2"></i> 1-4 단계 배포 결과 전체 복사 (리포트용)
+        </button>
+    </div>
+
+    <!-- [개선] 5단계: 로컬 VS Code 동기화 및 지능형 결과 검증 -->
     <div id="section-step5" class="deploy-card" style="display:none; border-top: 4px solid #10b981;">
         <div class="card-title">
             <span class="step-badge" style="background-color: #10b981;">5단계</span>
             <span>로컬 PC 작업 환경 최종 정화 (M, U 마커 제거)</span>
         </div>
         <div class="card-description">
-            서버 배포가 끝났지만 내 컴퓨터(VS Code)는 아직 그 사실을 모릅니다. 아래 명령어를 VS Code 터미널에 복사하여 실행하면 소스 제어 탭의 지저분한 마커들이 깨끗하게 정리됩니다.
+            서버 배포가 끝났지만 내 컴퓨터(VS Code)는 아직 그 사실을 모릅니다. 아래 버튼을 눌러 명령어를 복사한 후, VS Code 터미널에서 실행한 결과를 붙여넣어 검증을 완료하세요.
         </div>
         <div class="success-criteria" style="background-color: #ecfdf5; color: #065f46;">
             <i class="bi bi-info-circle-fill me-1"></i> <strong>완료 확인:</strong> VS Code 탐색기 파일 옆의 <b>M</b>(수정됨), <b>U</b>(추적안됨) 표시가 모두 사라져야 합니다.
         </div>
-        <div class="cmd-preview mt-2 mb-2" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" onclick="copyToClipboard('git fetch origin; git reset --hard origin/develop', '동기화 명령어')">git fetch origin; git reset --hard origin/develop <i class="bi bi-clipboard ms-2"></i></div>
+
+        <button type="button" class="btn-execute w-100 mb-3" style="background-color: #10b981; padding: 15px;" onclick="prepareStep5()">
+            <i class="bi bi-clipboard-check me-2"></i> 동기화 명령어 복사 및 검증 시작
+        </button>
+
+        <div id="step5-verification-area" style="display:none; border-top: 1px dashed #cbd5e1; padding-top: 20px; margin-top: 10px;">
+            <div class="cmd-preview mb-3" style="background-color: #f8fafc; color: #334155; border: 1px solid #e2e8f0;">git fetch origin; git reset --hard origin/develop</div>
+            
+            <div class="card-title mt-4">
+                <span class="step-badge" style="background-color: #64748b;">검증 모드</span>
+                <span>VS Code 터미널 결과 분석</span>
+            </div>
+            <textarea id="vscode-terminal-output" class="commit-input" rows="4" placeholder="VS Code 터미널의 실행 결과를 여기에 마우스 오른쪽 버튼으로 붙여넣으세요."></textarea>
+            <button type="button" class="btn-execute" style="background-color: #64748b;" onclick="verifyStep5Output()">터미널 결과 검증 실행</button>
+            <div id="analysis-step5" class="analysis-box"></div>
+        </div>
+
         <div class="small text-danger" style="font-size: 0.75rem;">
             <i class="bi bi-exclamation-triangle me-1"></i> 주의: 로컬에만 임시로 작성 중인 코드가 있다면 사라지니 반드시 배포 완료 직후에만 수행하세요.
         </div>
-    </div>
-
-    <!-- [추가] 전체 결과 복사 버튼 (모든 과정 완료 후 리포트용) -->
-    <div class="text-center mb-5" id="container-copy-all" style="display:none;">
-        <button type="button" class="btn-execute" style="width:100%; background-color:#0f172a; padding:15px;" onclick="copyAllLogs()"><i class="bi bi-clipboard-data-fill me-2"></i>1-4 단계 배포 결과 전체 복사</button>
     </div>
 
     <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
@@ -783,7 +801,80 @@ function showToast(message, type) {
         }, 400);
     }, 3500);
 }
-</script>
 
+/**
+ * [추가] 5단계 준비: 명령어 복사 및 입력창 활성화
+ */
+function prepareStep5() {
+    const cmd = "git fetch origin; git reset --hard origin/develop";
+    copyToClipboard(cmd, "동기화 명령어");
+    
+    const verifyArea = document.getElementById('step5-verification-area');
+    verifyArea.style.display = 'block';
+    verifyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    document.getElementById('vscode-terminal-output').focus();
+}
+
+/**
+ * [추가] 5단계 VS Code 터미널 결과 검증 로직
+ */
+function verifyStep5Output() {
+    const output = document.getElementById('vscode-terminal-output').value;
+    const analysisBox = document.getElementById('analysis-step5');
+    
+    if (!output.trim()) {
+        showToast('검증할 결과 내용을 붙여넣어 주세요.', 'error');
+        return;
+    }
+
+    analysisBox.style.display = 'block';
+    analysisBox.className = 'analysis-box verdict-warning';
+    analysisBox.innerHTML = '<div class="analysis-title"><i class="bi bi-search"></i> 분석 중...</div>';
+
+    setTimeout(() => {
+        const lowerOutput = output.toLowerCase();
+        let verdict = 'error';
+        let title = '검증 실패';
+        let guide = '명령어가 실행되지 않았거나, 예상치 못한 결과가 발생했습니다. 메시지를 다시 확인하세요.';
+        let icon = 'bi-x-circle-fill';
+
+        // Git reset output patterns (English and Korean)
+        if (lowerOutput.includes('head is now at') || lowerOutput.includes('head의 현재 위치는')) {
+            verdict = 'success';
+            title = '로컬 환경 정화 완수';
+            guide = 'VS Code의 로컬 코드가 서버와 완벽히 동기화되었습니다. 이제 수정 마커(M, U)가 사라졌을 것입니다.';
+            icon = 'bi-check-circle-fill';
+        } else if (lowerOutput.includes('already up to date') || lowerOutput.includes('이미 업데이트')) {
+            verdict = 'success';
+            title = '동기화 필요 없음';
+            guide = '로컬 코드가 이미 최신 상태입니다. 추가 작업 없이 개발을 계속하실 수 있습니다.';
+            icon = 'bi-info-circle-fill';
+        } else if (lowerOutput.includes('error:') || lowerOutput.includes('fatal:')) {
+            verdict = 'error';
+            title = '치명적 오류 탐지';
+            guide = '터미널에서 에러가 발생했습니다. 네트워크 상태나 Git 권한 설정을 확인해 주세요.';
+            icon = 'bi-bug-fill';
+        }
+
+        analysisBox.className = `analysis-box verdict-${verdict}`;
+        analysisBox.innerHTML = `
+            <div class="analysis-title">
+                <i class="bi ${icon}"></i> ${title}
+            </div>
+            <div class="guide-text">
+                ${guide}
+            </div>
+        `;
+        analysisBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        if (verdict === 'success') {
+            showToast('로컬 동기화 검증 성공!', 'success');
+        } else {
+            showToast('터미널 결과 분석 실패', 'error');
+        }
+    }, 800);
+}
+</script>
 </body>
 </html>
