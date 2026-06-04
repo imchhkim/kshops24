@@ -27,7 +27,8 @@ $test_files = [
     't_populate_sample_shop' => ['name' => '샘플 상점 데이터 생성', 'file' => './testers/t_populate_sample_shop.php', 'icon' => 'bi-cart-plus'],
     't_static_kr_to_langs' => ['name' => '정적 한글 문구 다국어 등록', 'file' => './testers/t_static_kr_to_langs.php', 'icon' => 'bi-globe'],
     't_register_test_shop' => ['name' => '테스트 상점 생성', 'file' => './testers/t_register_test_shop.php', 'icon' => 'bi-building-add'],
-    't_thumbnail_generator' => ['name' => '이미지 다이어트/청소', 'file' => './testers/t_thumbnail_generator.php', 'icon' => 'bi-images']
+    't_thumbnail_generator' => ['name' => '이미지 다이어트/청소', 'file' => './testers/t_thumbnail_generator.php', 'icon' => 'bi-images'],
+    't_git_deploy_dashboard' => ['name' => '서비스 서버로 동기화', 'file' => './testers/t_git_deploy_dashboard.php', 'icon' => 'bi-cloud-arrow-up']
 ];
 
 // 현재 view에 해당하는 파일이 존재하는지 확인

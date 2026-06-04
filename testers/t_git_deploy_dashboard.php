@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1300)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1400)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -109,8 +109,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     $output = [];
     $status_code = 0;
     
-    // 웹 서버 프로세스가 실행되는 위치를 현재 디렉토리로 명확히 강제 고정 (매우 중요)
-    $base_dir = escapeshellarg(__DIR__);
+    // [수정] 파일이 /testers 폴더로 이동했으므로, 기준 디렉토리를 한 단계 상위(Root)로 고정합니다.
+    $base_dir = escapeshellarg(dirname(__DIR__));
     
     // 🛡️ 호스팅어 서버 환경 변수 강제 주입 (인증 정보 및 한글 깨짐 방지)
     $env = "export HOME=/home/u743828642 && export LANG=ko_KR.UTF-8";
@@ -119,8 +119,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     switch ($step) {
         case 'step1':
             // [안전장치] 커밋 전 충돌 마커(<<<<<<< HEAD) 존재 여부 전수 검사
-            // 대시보드 파일 및 배포 제외 대상인 문서 파일(*.txt, *.md)은 검사에서 제외하여 불필요한 차단을 방지합니다.
-            $conflict_check = "grep -rl '<<<<<<< HEAD' . --exclude='git_deploy_dashboard.php' --exclude='*.txt' --exclude='*.md' 2>&1";
+            // [수정] 이동 전/후의 대시보드 파일명을 모두 제외 목록에 반영하여 불필요한 차단을 방지합니다.
+            $conflict_check = "grep -rl '<<<<<<< HEAD' . --exclude='t_git_deploy_dashboard.php' --exclude='git_deploy_dashboard.php' --exclude='*.txt' --exclude='*.md' 2>&1";
             $conflict_files = [];
             exec("cd {$base_dir} && {$conflict_check}", $conflict_files);
             if (!empty($conflict_files)) {
@@ -157,8 +157,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
             
         case 'rollback':
-            // [긴급] 실서버 배포 취소: main 브랜치를 이전 커밋으로 되돌리고 강제 푸시
-            $cmd = "{$env} && cd {$base_dir} && git checkout -f main 2>&1 && git reset --hard HEAD~1 2>&1 && git push origin main --force 2>&1 && git checkout -f develop 2>&1";
+            // [긴급] 실서버 배포 취소: main 브랜치를 이전 커밋으로 되돌리고 강제 푸시 ➡️ 실서버 즉시 동기화 가동
+            $live_dir = "/home/u743828642/domains/kshops24.com/public_html";
+            $rollback_cmd = "git fetch origin 2>&1 && git checkout -f main 2>&1 && git reset --hard HEAD~1 2>&1 && git push origin main --force 2>&1 && git checkout -f develop 2>&1";
+            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1";
+            $cmd = "{$env} && cd {$base_dir} && {$rollback_cmd} && echo '\n--- [실서버 롤백 동기화 가동] ---\n' && {$sync_cmd}";
             break;
 
         case 'emergency_reset':
@@ -526,8 +529,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="card-description">
             실서버(`main`)에 치명적인 문제가 발생했을 때 사용합니다. **가장 최근 배포를 취소**하고 실서버를 1단계 전으로 즉시 되돌립니다.
         </div>
+        <div class="success-criteria" style="background-color: #fef2f2; color: #991b1b;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>주의:</strong> 실서버와 원격 GitHub의 `main` 브랜치가 모두 1단계 과거로 강제 타임머신 이동합니다.
+        </div>
         <button type="button" class="btn-execute" style="background-color: #ef4444;" onclick="if(confirm('정말로 실서버를 이전 상태로 되돌리겠습니까?')) runGitPipeline('rollback', 'section-rollback')">🚨 실서버 즉시 복구 실행</button>
         <div id="console-rollback" class="console-log"></div>
+        <div id="analysis-rollback" class="analysis-box"></div>
     </div>
 
     <!-- [추가] 로컬 환경 초기화 섹션 -->
@@ -539,8 +546,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
         <div class="card-description">
             사이트에 `<<<<<<< HEAD` 같은 문구가 보이거나 배포가 꼬였을 때 사용합니다. **현재 수정 중인 내용을 모두 파기**하고 가장 최근의 성공적인 `develop` 상태로 되돌립니다.
         </div>
+        <div class="success-criteria">
+            <i class="bi bi-info-circle-fill me-1"></i> <strong>권장 상황:</strong> 병합 충돌 해결에 실패했거나, 테스트 서버의 코드를 원격지와 일치시키고 싶을 때 사용하세요.
+        </div>
         <button type="button" class="btn-execute" style="background-color: #64748b;" onclick="if(confirm('모든 수정사항을 버리고 깨끗한 상태로 되돌리시겠습니까?')) runGitPipeline('emergency_reset', 'section-reset')">🧹 로컬 환경 초기화 실행</button>
         <div id="console-emergency_reset" class="console-log"></div>
+        <div id="analysis-emergency_reset" class="analysis-box"></div>
     </div>
 </div>
 
@@ -693,6 +704,13 @@ function analyzeStepResult(step, log, backendSuccess) {
             title = '환경 정화 완료';
             guide = '모든 꼬인 상태를 강제 종료하고 원격 저장소 기준으로 초기화했습니다. 다시 1단계부터 시작할 수 있습니다.';
             icon = 'bi-stars';
+            break;
+
+        case 'rollback':
+            verdict = 'success';
+            title = '실서버 롤백 완수';
+            guide = '실서버가 성공적으로 이전 버전으로 되돌아갔습니다. GitHub와 실서버 폴더 모두 타임머신 작동이 완료되었습니다.';
+            icon = 'bi-shield-fill-check';
             break;
     }
 
