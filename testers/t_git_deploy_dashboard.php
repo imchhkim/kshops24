@@ -150,12 +150,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
                 exit;
             }
 
-            // [1단계] 배포 제외 대상 강제 세척(Sanitize) ➡️ 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
-            // 🛡️ 개발 유틸리티(_notes) 및 설정 파일들을 배포 대상에서 원천 차단합니다. (manuals 폴더는 상점주 교육용으로 유지)
-            // [최적화] 존재하지 않는 파일 패턴에 대한 fatal 에러를 방지하기 위해 파일 존재 여부를 확인하는 로직으로 보강 가능하나, 현재는 가독성을 위해 패턴 유지
-            // [보안] testers/ 및 주요 설정 파일들이 제외 목록에 들어있어 삭제되는 현상을 방지하기 위해 필터링을 완화합니다.
-            $cleanup = "git rm -r --cached uploads/ .vscode/ _notes/ 2>/dev/null || true";
-            $cmd = "{$env} && cd {$base_dir} && {$cleanup} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
+            // [1단계] 작업실 점검 ➡️ 전체 대기실 적재 ➡️ 로컬 버전 락인
+            // [보안] 절대 삭제 금지 원칙에 따라 git rm --cached 등의 인덱스 삭제 로직을 모두 제거했습니다.
+            $cmd = "{$env} && cd {$base_dir} && git status 2>&1 && git add . 2>&1 && git commit -m " . escapeshellarg($commit_message) . " 2>&1";
             break;
             
         case 'step2':
@@ -171,8 +168,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             // 이렇게 하면 GitHub 웹훅의 지연이나 실패에 상관없이 즉각적으로 실서버에 반영됩니다.
             $live_dir = "/home/u743828642/domains/kshops24.com/public_html";
             $deploy_cmd = "git fetch origin 2>&1 && (git checkout -f main 2>&1 || git checkout -b main origin/main 2>&1) && git reset --hard develop 2>&1 && git push origin main --force 2>&1 && git checkout -f develop 2>&1";
-            // [실서버 정화] 동기화 직후 개발용 파일(sql, txt, md)을 자동으로 삭제합니다.
-            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1 && rm -f schema.sql *.txt *.md 2>&1";
+            // [보안] 실서버 동기화 시 물리적 파일 삭제(rm) 명령을 제거하여 데이터 안전을 보장합니다.
+            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1";
             $cmd = "{$env} && cd {$base_dir} && {$deploy_cmd} && echo '\n--- [실서버 즉시 동기화 가동] ---\n' && {$sync_cmd}";
             break;
             
@@ -185,14 +182,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             // [긴급] 실서버 배포 취소: main 브랜치를 이전 커밋으로 되돌리고 강제 푸시 ➡️ 실서버 즉시 동기화 가동
             $live_dir = "/home/u743828642/domains/kshops24.com/public_html";
             $rollback_cmd = "git fetch origin 2>&1 && git checkout -f main 2>&1 && git reset --hard HEAD~1 2>&1 && git push origin main --force 2>&1 && git checkout -f develop 2>&1";
-            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1 && rm -f schema.sql *.txt *.md 2>&1";
+            // [보안] 롤백 시에도 물리적 파일 삭제 명령을 제거했습니다.
+            $sync_cmd = "cd {$live_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1";
             $cmd = "{$env} && cd {$base_dir} && {$rollback_cmd} && echo '\n--- [실서버 롤백 동기화 가동] ---\n' && {$sync_cmd}";
             break;
 
         case 'emergency_reset':
-            // [긴급] 로컬 환경 완전 세척: 머지 중단 -> 원격 최신본 확보 -> 강제 덮어쓰기 -> 찌꺼기 파일 제거
-            // 단순히 reset만 하는 것이 아니라 fetch와 clean을 조합하여 "완전 무결 상태"를 강제합니다.
-            $cmd = "{$env} && cd {$base_dir} && git merge --abort 2>&1 || true && git fetch --all 2>&1 && git reset --hard origin/develop 2>&1 && git clean -fd 2>&1 && git checkout -f develop 2>&1";
+            // [긴급] 로컬 환경 완전 세척: 머지 중단 -> 원격 최신본 확보 -> 강제 덮어쓰기
+            // [보안] 데이터 보호를 위해 git clean -fd(추적되지 않는 파일 강제 삭제) 명령은 수행하지 않습니다.
+            $cmd = "{$env} && cd {$base_dir} && git merge --abort 2>&1 || true && git fetch --all 2>&1 && git reset --hard origin/develop 2>&1 && git checkout -f develop 2>&1";
             break;
 
         case 'sync_sample':
