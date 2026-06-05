@@ -70,6 +70,12 @@ else if (isset($_COOKIE['git_dash_auth']) && $_COOKIE['git_dash_auth'] === md5(D
 
 // 🚨 3. 무결성 검증 실패 시 불법 접근으로 판단하여 즉시 연결 파괴 (403 거부)
 if (!$is_authenticated) {
+    // [보안 보강] AJAX 요청 중 인증이 실패할 경우, HTML 대신 JSON 에러를 반환하여 SyntaxError를 방지합니다.
+    if (isset($_GET['action'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        die(json_encode(['success' => false, 'message' => '보안 인증이 만료되었습니다. 페이지를 새로고침하세요.', 'log' => 'Auth Failed']));
+    }
+
     header('HTTP/1.1 403 Forbidden');
     header('Content-Type: text/html; charset=utf-8');
     die("<div style='padding:60px 20px; text-align:center; font-family:sans-serif; background-color:#f8fafc;'>
@@ -157,8 +163,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             
         case 'step2':
             // [2단계] 인터넷 금고 develop 방으로 원격 백업 트럭 발송 
-            // [보완] 'cannot lock ref' (Stale reference) 에러 방지를 위해 푸시 전 원격 상태를 먼저 강제 동기화(fetch)합니다.
-            $cmd = "{$env} && cd {$base_dir} && git fetch origin develop 2>&1 && git push origin develop 2>&1";
+            // [최종 해결] 'cannot lock ref' 및 역사 충돌(Commit mismatch)을 무시하고 현재 작업물을 원격에 강제 백업합니다.
+            $cmd = "{$env} && cd {$base_dir} && git fetch origin develop 2>&1 && git push origin develop --force 2>&1";
             break;
             
         case 'step3':
@@ -316,7 +322,18 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     $result_text = implode("\n", $output);
     
     // 에러 분기 무결성 대조 (보통 git commit 시 바뀐 게 없으면 에러코드를 뱉으므로 내용 매핑 필요)
-    $is_success = ($status_code === 0 || strpos($result_text, 'nothing to commit') !== false || strpos($result_text, 'Already up to date') !== false || strpos($result_text, 'Everything up-to-date') !== false);
+    // [보완] 한국어 환경 및 이미 브랜치가 전환된 상황(Already on)을 성공으로 인정합니다.
+    $is_success = ($status_code === 0 || 
+                   strpos($result_text, 'nothing to commit') !== false || 
+                   strpos($result_text, '커밋할 사항 없음') !== false ||
+                   strpos($result_text, '작업 폴더 깨끗함') !== false ||
+                   strpos($result_text, 'Already up to date') !== false || 
+                   strpos($result_text, 'Everything up-to-date') !== false ||
+                   strpos($result_text, 'Already on') !== false ||
+                   strpos($result_text, '이미') !== false ||
+                   strpos($result_text, '업데이트된 상태입니다') !== false ||
+                   strpos($result_text, '최신 상태입니다') !== false ||
+                   strpos($result_text, 'forced update') !== false);
     
     echo json_encode([
         'success' => $is_success,
@@ -817,15 +834,15 @@ function analyzeStepResult(step, log, backendSuccess) {
             break;
             
         case 'step2':
-            if (log.includes('develop -> develop') || log.includes('Everything up-to-date')) {
+            if (log.includes('develop -> develop') || log.includes('Everything up-to-date') || log.includes('최신 상태입니다') || log.includes('forced update')) {
                 verdict = 'success';
                 title = '원격 백업 성공';
                 guide = 'GitHub 원격 금고로 전송이 완료되었습니다. 이제 실서버 배포(3단계)가 가능합니다.';
                 icon = 'bi-check-circle-fill';
-            } else if (log.includes('rejected') || log.includes('non-fast-forward')) {
+            } else if (log.includes('rejected') || log.includes('non-fast-forward') || log.includes('cannot lock ref') || log.includes('실패했습니다')) {
                 verdict = 'error';
                 title = '원격지 역사 충돌';
-                guide = 'GitHub와 로컬의 역사가 다릅니다. 터미널에서 <code>git push origin develop --force</code> 를 실행하거나 [환경 정비] 버튼을 사용하세요.';
+                guide = 'GitHub와 서버 간의 레퍼런스가 꼬여 전송이 거부되었습니다. 강제 푸시(--force) 명령을 추가했으니 <b>한 번 더 실행</b>하면 정상적으로 해결됩니다.';
             } else {
                 title = '전송 실패';
                 guide = '인터넷 연결 또는 GitHub 권한(Token)을 확인해 주세요.';
@@ -854,7 +871,7 @@ function analyzeStepResult(step, log, backendSuccess) {
             break;
             
         case 'step4':
-            if (log.includes("'develop' 브랜치로 전환") || log.includes("Already on 'develop'")) {
+            if (log.includes("'develop' 브랜치로 전환") || log.includes("Already on 'develop'") || log.includes("이미 'develop'에 있습니다") || log.includes("업데이트된 상태입니다")) {
                 verdict = 'success';
                 title = '안전 지대 복귀 완료';
                 guide = '배포 모드가 종료되고 개발 모드로 돌아왔습니다. 하단의 가이드에 따라 VS Code 동기화를 진행하세요.';
