@@ -9,6 +9,11 @@
 // 1. 서버 루트 및 기본 경로 확보
 $base_dir = dirname(__DIR__);
 
+// 1-1. [환경 감지] 서비스 환경(Live)과 테스트 환경(Test/Local)을 구분하는 전역 상수 정의
+$current_host = $_SERVER['HTTP_HOST'] ?? '';
+$is_test_host = (strpos($current_host, 'test.kshops24.com') !== false || in_array($current_host, ['localhost', '127.0.0.1']));
+define('IS_TEST_ENV', $is_test_host);
+
 // 2. 메시지 초기화 및 필리핀 현지 타임존 설정
 $message = "";
 date_default_timezone_set('Asia/Manila');

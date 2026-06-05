@@ -8,9 +8,13 @@
 // 1. [공통 헤더 로드] DB 세션 핸들러를 포함한 공통 엔진 로드
 require_once $_SERVER['DOCUMENT_ROOT'] . '/common/common_header.php';
 
-// 2. [데이터 파기] 현재 서버에 저장된 모든 세션 변수 및 데이터를 완전히 삭제
-// 관리자 로그인 정보(admin_logged_in 등)가 여기서 모두 초기화됩니다.
-session_destroy();
+// 2. [수정] 슈퍼 관리자 관련 세션 변수만 선택적으로 제거
+// session_destroy() 대신 unset()을 사용하여 로그인된 상점 관리자 세션에 영향을 주지 않습니다.
+unset($_SESSION['admin_logged_in']);
+unset($_SESSION['admin_user']);
+unset($_SESSION['admin_id']);
+unset($_SESSION['admin_name']);
+unset($_SESSION['admin_role']);
 
 // 3. [페이지 이동] 로그아웃 완료 후 관리자 로그인 화면으로 즉시 리다이렉트
 header("Location: admin_login.php");

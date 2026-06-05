@@ -5,11 +5,9 @@
  * 역할: 공통 하단 에러 감지 및 리소스 정리
  */
 
-// [환경 감지] 테스트 서버와 실서버 구분을 위해 호스트명을 체크합니다.
-$is_test_env_footer = (strpos($_SERVER['HTTP_HOST'] ?? '', 'test.kshops24.com') !== false || in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1']));
 // 환경별 버튼 색상 및 그림자 색상 설정 (실서버: 파란색, 테스트: 빨간색)
-$quick_nav_bg = $is_test_env_footer ? 'linear-gradient(135deg, #ef4444, #991b1b)' : 'linear-gradient(135deg, #004aad, #002e6b)';
-$quick_nav_shadow = $is_test_env_footer ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0.4)';
+$quick_nav_bg = IS_TEST_ENV ? 'linear-gradient(135deg, #ef4444, #991b1b)' : 'linear-gradient(135deg, #004aad, #002e6b)';
+$quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0.4)';
 ?>
 <style>
     /* =========================================================================

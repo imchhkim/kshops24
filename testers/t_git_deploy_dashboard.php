@@ -37,10 +37,10 @@
  */
 
 // 🛡️ 0. 운영 서버 오작동 방지 (로컬 및 테스트 환경에서만 허용)
-$current_host = $_SERVER['HTTP_HOST'] ?? '';
-$is_safe_env = (strpos($current_host, 'test.kshops24.com') !== false || strpos($current_host, 'localhost') !== false || strpos($current_host, '127.0.0.1') !== false);
+// [최적화] common_header.php에서 정의한 IS_TEST_ENV 상수를 활용하도록 최적화
+require_once dirname(__DIR__) . '/common/common_header.php';
 
-if (!$is_safe_env) {
+if (!IS_TEST_ENV) {
     header('HTTP/1.1 403 Forbidden');
     header('Content-Type: text/html; charset=utf-8');
     die("<div style='padding:60px 20px; text-align:center; font-family:sans-serif; background-color:#f8fafc;'>

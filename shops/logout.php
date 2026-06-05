@@ -7,8 +7,11 @@
 // 1. 공통 헤더 로드 (DB 세션 핸들러 등)
 require_once dirname(__DIR__) . '/common/common_header.php';
 
-// 2. 모든 세션 정보 완전히 파기 (로그아웃 처리)
-session_destroy();
+// 2. [수정] 상점 관리자 관련 세션 변수만 선택적으로 제거
+// session_destroy() 대신 unset()을 사용하여 슈퍼 관리자 세션 정보는 보존합니다.
+unset($_SESSION['shop_id']);
+unset($_SESSION['subdomain']);
+unset($_SESSION['manager_name']);
 
 // 3. 되돌아갈 경로 확인 (이전 페이지가 있으면 그곳으로, 없으면 포털 메인으로)
 $referer = $_SERVER['HTTP_REFERER'] ?? '/';

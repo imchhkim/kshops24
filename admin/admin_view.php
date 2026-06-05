@@ -15,6 +15,9 @@ if (file_exists($header_path)) {
     die("오류: 관리자 헤더 파일을 찾을 수 없습니다. (경로: $header_path)");
 }
 
+// [환경 감지] 슈퍼 관리자 페이지 브랜드 로고 색상 설정 (IS_TEST_ENV 상수에 따라 자동 변경)
+$admin_brand_color = IS_TEST_ENV ? '#ef4444' : '#00d4ff';
+
 // 2. 페이지 라우팅
 $page = $_GET['page'] ?? 'admin_dashboard'; // 접속 시 기본 화면을 대시보드로 변경
 $allowed_pages = [
@@ -86,7 +89,7 @@ if ($page === 'manage_site') {
         }
 
         .navbar-brand-custom {
-            color: #00d4ff !important;
+            color: <?php echo $admin_brand_color; ?> !important;
             font-weight: 800;
             text-transform: uppercase;
             text-decoration: none;

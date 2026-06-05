@@ -15,6 +15,9 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 
 $error = "";
 
+// [환경 감지] 슈퍼 관리자 페이지 브랜드 로고 색상 설정 (IS_TEST_ENV 상수에 따라 자동 변경)
+$admin_brand_color = IS_TEST_ENV ? '#ef4444' : '#00d4ff';
+
 // [버그 수정] 처음 접속(GET) 시 변수 미정의 에러 방지 및 '아이디 저장' 쿠키 불러오기
 $input_user = $_COOKIE['saved_admin_id'] ?? "";
 $is_remembered = isset($_COOKIE['saved_admin_id']);
@@ -90,9 +93,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         .admin-icon {
             font-size: 3rem;
-            color: #212529;
+            color: <?php echo $admin_brand_color; ?>;
             margin-bottom: 20px;
         }
+
+        .admin-title {
+            font-size: 1.5rem;
+            color: <?php echo $admin_brand_color; ?>;
+            margin-bottom: 20px;
+        }        
 
         .btn-admin {
             background-color: #212529;
@@ -117,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <div class="admin-icon">
             <i class="bi bi-shield-lock"></i>
         </div>
-        <h4 class="fw-bold mb-4">Super Admin Portal</h4>
+        <h4 class="admin-title fw-bold mb-4">Super Admin Portal</h4>
 
         <?php if ($error): ?>
             <div class="alert alert-danger py-2 small"><?php echo htmlspecialchars($error); ?></div>

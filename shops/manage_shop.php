@@ -15,6 +15,8 @@ ob_start();
 // 1. 상점 관리자 공통 헤더 로드 (세션 검증 및 $shop 정보 로드 포함)
 require_once $_SERVER['DOCUMENT_ROOT'] . '/common/manage_common_header.php';
 
+// [환경 감지] 상점 관리자 페이지 브랜드 로고 색상 설정 (IS_TEST_ENV 상수에 따라 자동 변경)
+$dash_brand_color = IS_TEST_ENV ? '#ef4444' : '#004aad';
 
 // 프론트엔드 출력을 위해 업데이트된 UI 설정값 디코딩
 $ui = json_decode($shop['ui_settings'] ?? '{}', true);
@@ -318,7 +320,7 @@ if (!isset($_GET['pg']) || $_GET['pg'] === 'manage_shop_dashboard') {
     <!-- [PC 화면 전용] 좌측 사이드바 네비게이션 영역 -->
     <nav class="sidebar">
         <div class="p-4 text-center border-bottom mb-3">
-            <h4 class="fw-bold text-primary mb-0">KShops24</h4>
+            <h4 class="fw-bold mb-0" style="color: <?php echo $dash_brand_color; ?>;">KShops24</h4>
             <small class="text-muted"><?= htmlspecialchars($shop_category_label) ?></small>
         </div>
 
