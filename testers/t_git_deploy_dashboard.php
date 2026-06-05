@@ -95,6 +95,27 @@ if (!defined('APP_STAGE_TITLE')) {
 }
 
 // -------------------------------------------------------------------------
+// [검증 섹션] 이관 전 상점 상태 및 샘플 여부 확인 API
+// -------------------------------------------------------------------------
+if (isset($_GET['action']) && $_GET['action'] === 'verify_shop') {
+    require_once __DIR__ . '/t_common.php';
+    header('Content-Type: application/json; charset=utf-8');
+    $shop_id = (int)($_GET['shop_id'] ?? 0);
+    $test_db = "u743828642_philshop24";
+
+    $stmt = $pdo->prepare("SELECT shop_name, is_sample_shop FROM `{$test_db}`.`shops` WHERE id = ?");
+    $stmt->execute([$shop_id]);
+    $shop = $stmt->fetch();
+
+    if (!$shop) {
+        echo json_encode(['success' => false, 'message' => '테스트 DB에서 해당 ID의 상점을 찾을 수 없습니다.']);
+    } else {
+        echo json_encode(['success' => true, 'shop_name' => $shop['shop_name'], 'is_sample' => $shop['is_sample_shop']]);
+    }
+    exit;
+}
+
+// -------------------------------------------------------------------------
 // [AJAX 통신 처리 섹션] 화면 깜빡임 없이 Git 명령어를 백엔드에서 대리 실행
 // -------------------------------------------------------------------------
 if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
@@ -185,10 +206,34 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             $test_db = "u743828642_philshop24";
             $live_db = "u743828642_kshops24";
             
+            // [보완] 크로스 DB 권한(1142) 오류 해결을 위해 실서버 전용 PDO 커넥션을 별도로 생성합니다.
+            // 테스트 DB 유저는 실서버 DB에 쓰기 권한이 없으므로, 실서버 유저로 직접 접속하여 데이터를 이관합니다.
+            $live_user = "u743828642_kshops24_admin";
+            $live_pass = "zlatmgK15%"; 
+            $live_dsn  = "mysql:host=localhost;dbname={$live_db};charset=utf8mb4";
+            
+            try {
+                $pdo_live = new PDO($live_dsn, $live_user, $live_pass, [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ]);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => '실서버 DB 연결 실패: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             // 1. 테스트 DB에서 서브도메인 확보
-            $stmt = $pdo->prepare("SELECT subdomain FROM {$test_db}.shops WHERE id = ?");
+            // [보안] 이관 실행 직전 서버에서도 다시 한번 is_sample_shop='y' 인지 검증합니다.
+            $stmt = $pdo->prepare("SELECT subdomain, is_sample_shop FROM {$test_db}.shops WHERE id = ?");
             $stmt->execute([$target_shop_id]);
-            $subdomain = $stmt->fetchColumn();
+            $shop_check = $stmt->fetch();
+            $subdomain = $shop_check['subdomain'] ?? null;
+
+            if (!$subdomain || ($shop_check['is_sample_shop'] ?? 'n') !== 'y') {
+                echo json_encode(['success' => false, 'message' => "보안 거부: 샘플 상점으로 등록되지 않은 데이터(is_sample_shop=n)는 이관할 수 없습니다."], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
 
             if (!$subdomain) {
                 echo json_encode(['success' => false, 'message' => "테스트 DB에서 ID {$target_shop_id} 상점을 찾을 수 없습니다."], JSON_UNESCAPED_UNICODE);
@@ -197,20 +242,43 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
 
             // 2. DB 이관 (REPLACE INTO를 사용하여 실서버에 동일 ID가 있어도 덮어쓰기 처리)
             // 주요 관련 테이블 일괄 복사
-            $tables = ['shops', 'shop_items', 'shop_item_categories', 'shop_images', 'shop_item_boards', 'shop_payments'];
+            // [순서 중요] shop_items는 shop_item_categories를 참조하므로 카테고리를 먼저 이관해야 외래키 제약 조건을 통과합니다.
+            $tables = ['shops', 'shop_item_categories', 'shop_items', 'shop_images', 'shop_item_boards', 'shop_payments'];
             $sync_logs = []; // 로그 배열 초기화
             $sync_logs[] = "--- [데이터베이스 이관 시작: ID {$target_shop_id}] ---";
             
             $db_error_count = 0;
             foreach ($tables as $t) {
                 try {
+                    // [보완] 테이블별 작업 시 외래키 체크를 일시 해제하여 종속성 에러를 원천 차단합니다.
+                    $pdo_live->exec("SET FOREIGN_KEY_CHECKS = 0");
+
                     $id_col = ($t === 'shops') ? 'id' : 'shop_id';
-                    // [주의] DB 권한 에러(1142) 발생 시 호스팅어 설정에서 해당 사용자의 교차 DB 권한을 확인해야 합니다.
-                    $pdo->exec("DELETE FROM {$live_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
-                    $pdo->exec("INSERT INTO {$live_db}.{$t} SELECT * FROM {$test_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
+
+                    // 2.1 테스트 DB에서 데이터 추출 (Source: $pdo)
+                    $stmt_source = $pdo->prepare("SELECT * FROM `{$test_db}`.`{$t}` WHERE `{$id_col}` = ?");
+                    $stmt_source->execute([$target_shop_id]);
+                    $rows = $stmt_source->fetchAll();
+
+                    // 2.2 실서버 DB 기존 레코드 정리 (Target: $pdo_live)
+                    $pdo_live->prepare("DELETE FROM `{$t}` WHERE `{$id_col}` = ?")->execute([$target_shop_id]);
+
+                    // 2.3 실서버 DB로 데이터 주입 (Target: $pdo_live)
+                    if (!empty($rows)) {
+                        foreach ($rows as $row) {
+                            $columns = array_keys($row);
+                            $col_list = implode('`, `', $columns);
+                            $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+                            $sql_insert = "INSERT INTO `{$t}` (`{$col_list}`) VALUES ({$placeholders})";
+                            $pdo_live->prepare($sql_insert)->execute(array_values($row));
+                        }
+                    }
                     $sync_logs[] = "✅ Table [{$t}] sync completed.";
+                    
+                    $pdo_live->exec("SET FOREIGN_KEY_CHECKS = 1");
                 } catch (Exception $e) {
                     $sync_logs[] = "❌ Table [{$t}] sync failed: " . $e->getMessage();
+                    $pdo_live->exec("SET FOREIGN_KEY_CHECKS = 1");
                     $db_error_count++;
                 }
             }
@@ -1001,19 +1069,46 @@ function verifyStep5Output() {
 /**
  * [추가] 6단계 샘플 상점 데이터 이관 실행 로직
  */
-function runDataSync() {
+async function runDataSync() {
     const shopId = document.getElementById('sync-shop-id').value;
     if (!shopId) {
         showToast('이관할 상점 ID를 입력해 주세요.', 'error');
         document.getElementById('sync-shop-id').focus();
         return;
     }
-
-    if (!confirm('테스트 DB와 이미지 폴더를 실서버로 복사합니다. 계속하시겠습니까?')) return;
     
-    // 이관 작업은 내부적으로 runGitPipeline 형식을 빌려 쓰되, shop_id를 파라미터로 넘깁니다.
-    // (기존 runGitPipeline 함수를 수정하지 않고 재사용하기 위해 전역 input 값을 참조하도록 처리됨)
-    runGitPipeline('sync_sample', 'section-sync');
+    const btn = event.target;
+    const originText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> 상점 검증 중...';
+
+    try {
+        // 1단계: 상점 정보 및 샘플 여부 비동기 확인
+        const response = await fetch(`?action=verify_shop&shop_id=${shopId}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            alert('검증 실패: ' + data.message);
+            return;
+        }
+
+        // 2단계: 샘플 상점 여부 판독
+        if (data.is_sample !== 'y') {
+            alert(`🚨 이관 불가 (보안 통제)\n\n대상: ${data.shop_name}\n\n이 상점은 '일반 상점(is_sample_shop=n)'으로 설정되어 있습니다.\n실수로 운영 데이터를 덮어쓰는 것을 방지하기 위해 이관이 차단되었습니다.`);
+            return;
+        }
+
+        // 3단계: 최종 사용자 승인
+        if (confirm(`[이관 확인]\n\n대상 상점: ${data.shop_name}\n\n위 샘플 상점의 DB와 이미지 폴더를 실서버(kshops24.com)로 즉시 복사하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+            // 이관 작업은 내부적으로 runGitPipeline 형식을 빌려 쓰되, shop_id를 파라미터로 넘깁니다.
+            runGitPipeline('sync_sample', 'section-sync');
+        }
+    } catch (error) {
+        alert('검증 과정에서 통신 에러가 발생했습니다.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originText;
+    }
 }
 </script>
 </body>

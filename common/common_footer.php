@@ -4,6 +4,12 @@
  * 파일명: /common/common_footer.php
  * 역할: 공통 하단 에러 감지 및 리소스 정리
  */
+
+// [환경 감지] 테스트 서버와 실서버 구분을 위해 호스트명을 체크합니다.
+$is_test_env_footer = (strpos($_SERVER['HTTP_HOST'] ?? '', 'test.kshops24.com') !== false || in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost', '127.0.0.1']));
+// 환경별 버튼 색상 및 그림자 색상 설정 (실서버: 파란색, 테스트: 빨간색)
+$quick_nav_bg = $is_test_env_footer ? 'linear-gradient(135deg, #ef4444, #991b1b)' : 'linear-gradient(135deg, #004aad, #002e6b)';
+$quick_nav_shadow = $is_test_env_footer ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0.4)';
 ?>
 <style>
     /* =========================================================================
@@ -830,7 +836,7 @@
                     .quick-nav-menu::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.15); border-radius: 4px; }
                     .quick-nav-menu .dropdown-item { border-radius: 8px; transition: all 0.2s ease; font-size: 0.95rem; }
                     .quick-nav-menu .dropdown-item:hover { background-color: #f0f4f8; color: #004aad !important; transform: translateX(5px); }
-                    .quick-nav-btn { background: linear-gradient(135deg, #004aad, #002e6b) !important; color: white !important; border: 3px solid rgba(255,255,255,0.9) !important; box-shadow: 0 8px 20px rgba(0,74,173,0.4) !important; transition: transform 0.2s ease; touch-action: none; }
+                    .quick-nav-btn { background: <?php echo $quick_nav_bg; ?> !important; color: white !important; border: 3px solid rgba(255,255,255,0.9) !important; box-shadow: 0 8px 20px <?php echo $quick_nav_shadow; ?> !important; transition: transform 0.2s ease; touch-action: none; }
                     .quick-nav-btn:hover { transform: scale(1.05); }
                     .quick-nav-btn::after { display: none !important; } /* 부트스트랩 기본 화살표 숨김 */
                 `;
