@@ -136,8 +136,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
             
         case 'step2':
-            // [2단계] 인터넷 금고 develop 방으로 원격 백업 트럭 발송
-            $cmd = "{$env} && cd {$base_dir} && git push origin develop 2>&1";
+            // [2단계] 인터넷 금고 develop 방으로 원격 백업 트럭 발송 
+            // [보완] 'cannot lock ref' (Stale reference) 에러 방지를 위해 푸시 전 원격 상태를 먼저 강제 동기화(fetch)합니다.
+            $cmd = "{$env} && cd {$base_dir} && git fetch origin develop 2>&1 && git push origin develop 2>&1";
             break;
             
         case 'step3':
