@@ -3,6 +3,14 @@
 .vscode/
 _notes/
 
+ai-context.md
+PROJECT_STRUCTURE.md
+schema.sql
+
+명령 모음.txt
+설명 모음.txt
+홍보내용.txt
+
 # 저장소 루트 기준의 데이터 및 환경 폴더 제외
 /uploads/
 /test_env/
