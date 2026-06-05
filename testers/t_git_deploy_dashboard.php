@@ -90,7 +90,7 @@ function json_with_response($success, $msg) {
 // [시스템 상수 정의] 부모 config.php 파일의 무결성 설정을 상속 및 방어 정의
 // -------------------------------------------------------------------------
 if (!defined('APP_STAGE_TITLE')) {
-    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.1800)');
+    define('APP_STAGE_TITLE', 'K-Shops24 Git 배포 사령탑 (v2026.06.05.2100)');
     define('DEFAULT_COMMIT_MSG', 'K-Shops24 백엔드 AJAX 기능 및 페이징 안정화 빌드');
 }
 
@@ -171,6 +171,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             break;
 
         case 'sync_sample':
+            // [보정] AJAX 단독 실행 시 DB 연결($pdo) 확보를 위해 공통 테스터 헤더를 호출합니다.
+            require_once __DIR__ . '/t_common.php';
+
             // [6단계] 샘플 상점 데이터 및 이미지 실서버 강제 이관
             $target_shop_id = (int)$_POST['shop_id'];
             if (!$target_shop_id) {
@@ -194,24 +197,41 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             // 2. DB 이관 (REPLACE INTO를 사용하여 실서버에 동일 ID가 있어도 덮어쓰기 처리)
             // 주요 관련 테이블 일괄 복사
             $tables = ['shops', 'shop_items', 'shop_item_categories', 'shop_images', 'shop_item_boards', 'shop_payments'];
-            $sync_logs = [];
+            $sync_logs = []; // 로그 배열 초기화
+            $sync_logs[] = "--- [데이터베이스 이관 시작: ID {$target_shop_id}] ---";
+            
+            $db_error_count = 0;
             foreach ($tables as $t) {
-                $id_col = ($t === 'shops') ? 'id' : 'shop_id';
-                $pdo->exec("DELETE FROM {$live_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
-                $pdo->exec("INSERT INTO {$live_db}.{$t} SELECT * FROM {$test_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
-                $sync_logs[] = "Table [{$t}] sync completed.";
+                try {
+                    $id_col = ($t === 'shops') ? 'id' : 'shop_id';
+                    // [주의] DB 권한 에러(1142) 발생 시 호스팅어 설정에서 해당 사용자의 교차 DB 권한을 확인해야 합니다.
+                    $pdo->exec("DELETE FROM {$live_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
+                    $pdo->exec("INSERT INTO {$live_db}.{$t} SELECT * FROM {$test_db}.{$t} WHERE {$id_col} = {$target_shop_id}");
+                    $sync_logs[] = "✅ Table [{$t}] sync completed.";
+                } catch (Exception $e) {
+                    $sync_logs[] = "❌ Table [{$t}] sync failed: " . $e->getMessage();
+                    $db_error_count++;
+                }
             }
 
             // 3. 물리 파일(이미지 폴더) 복사 (Shell 명령 활용)
             $test_upload_path = "/home/u743828642/domains/kshops24.com/public_html/test_env/uploads/shops/{$subdomain}";
             $live_upload_path = "/home/u743828642/domains/kshops24.com/public_html/uploads/shops/";
+            $sync_logs[] = "\n--- [물리 이미지 폴더 복사: /{$subdomain}] ---";
             
-            $copy_cmd = "cp -rp " . escapeshellarg($test_upload_path) . " " . escapeshellarg($live_upload_path) . " 2>&1";
-            exec($copy_cmd, $file_output, $status_code);
+            // [안전장치] 원본 폴더 존재 여부 확인 후 복사 수행
+            if (!is_dir($test_upload_path)) {
+                $sync_logs[] = "⚠️ 경고: 테스트 환경에 이미지 폴더가 존재하지 않아 파일 복사는 건너뜁니다.";
+                $file_output = ["Source directory not found: {$test_upload_path}"];
+            } else {
+                $copy_cmd = "cp -rp " . escapeshellarg($test_upload_path) . " " . escapeshellarg($live_upload_path) . " 2>&1";
+                exec($copy_cmd, $file_output, $status_code);
+            }
 
+            $final_success = ($db_error_count === 0);
             echo json_encode([
-                'success' => true,
-                'message' => "상점 [{$subdomain}] 데이터 및 이미지 이관 완료!",
+                'success' => $final_success,
+                'message' => $final_success ? "상점 [{$subdomain}] 강제 이관 완료" : "데이터 이관 중 일부 DB 오류가 발생했습니다. 로그를 확인하세요.",
                 'log' => implode("\n", $sync_logs) . "\n\n--- File Copy Result ---\n" . implode("\n", $file_output)
             ], JSON_UNESCAPED_UNICODE);
             exit;
@@ -567,7 +587,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
     </div>
 
     <!-- [추가] 6단계: 데이터 특급 이관 섹션 -->
-    <div id="section-sync" class="deploy-card" style="display:none; border-top: 4px solid #8b5cf6;">
+    <div id="section-sync" class="deploy-card" style="border-top: 4px solid #8b5cf6;">
         <div class="card-title">
             <span class="step-badge" style="background-color: #8b5cf6;">6단계</span>
             <span>데이터 특급 이관 (테스트 상점 → 실서버)</span>
@@ -585,8 +605,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'execute_git') {
             <button type="button" class="btn-execute" style="background-color: #8b5cf6;" onclick="runDataSync()">데이터 및 이미지 이관 실행</button>
         </div>
 
-        <div id="console-sync" class="console-log"></div>
-        <div id="analysis-sync" class="analysis-box"></div>
+        <div id="console-sync_sample" class="console-log" style="max-height: 250px;"></div>
+        <div id="analysis-sync_sample" class="analysis-box"></div>
     </div>
 
     <!-- 긴급 복구 섹션 (평소에는 눈에 띄지 않게 하단 배치) -->
@@ -646,6 +666,12 @@ function runGitPipeline(step, sectionId) {
     formData.append('step', step);
     formData.append('commit_message', commitMessage);
     
+    // [수정] 6단계 데이터 이관 시 상점 ID 파라미터를 누락 없이 수집하여 전송합니다.
+    if (step === 'sync_sample') {
+        const syncId = document.getElementById('sync-shop-id').value;
+        formData.append('shop_id', syncId);
+    }
+    
     // 비동기 FETCH API 통신 개통
     fetch('?action=execute_git', {
         method: 'POST',
@@ -677,10 +703,6 @@ function runGitPipeline(step, sectionId) {
             if (step === 'step4') {
                 document.getElementById('section-step5').style.display = 'block';
                 
-                // [추가] 6단계(데이터 이관) 섹션도 함께 노출하여 선택할 수 있게 함
-                const syncSection = document.getElementById('section-sync');
-                if(syncSection) syncSection.style.display = 'block';
-
                 // 4단계 완료 후 5단계로 스크롤 이동
                 setTimeout(() => {
                     document.getElementById('section-step5').scrollIntoView({ behavior: 'smooth', block: 'center' });
