@@ -3,16 +3,9 @@
 .vscode/
 _notes/
 
-# 개발 도구 및 테스트/문서 파일 제외 (서비스 환경 배포 방지)
-/testers/
-*.txt
-*.md
-schema.sql
-
-# 저장소 루트 기준의 uploads 폴더 제외 (앞에 /를 붙이면 현재 폴더 기준)
+# 저장소 루트 기준의 데이터 및 환경 폴더 제외
 /uploads/
 /test_env/
 
 .DS_Store
 Thumbs.db
-

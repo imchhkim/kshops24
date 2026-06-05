@@ -34,7 +34,8 @@ $output = [];
 $return_var = 0;
 // [보안 강화] pull 대신 fetch & reset --hard를 사용하여 실서버 코드를 GitHub(origin/main)과 100% 강제 동기화합니다.
 // 이는 실서버에서 발생할 수 있는 의도치 않은 코드 꼬임이나 충돌 마커 발생을 원천 차단하는 가장 안전한 방식입니다.
-exec("cd {$target_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1", $output, $return_var);
+// [실서버 정화] 배포 직후 개발 전용 파일들을 삭제하여 보안을 강화합니다.
+exec("cd {$target_dir} && git fetch origin main 2>&1 && git reset --hard origin/main 2>&1 && rm -f schema.sql *.txt *.md 2>&1", $output, $return_var);
 
 // 4. 배포 로그 기록 (디버깅용)
 if ($return_var === 0) {
