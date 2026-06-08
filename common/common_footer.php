@@ -47,8 +47,8 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
 <!-- 
     [시스템 공통 알림] AJAX 작업 성공/실패 시 화면 우측 하단에 뜨는 공통 토스트 메시지 영역
 -->
-<div class="toast-container position-fixed end-0 p-3" style="bottom: 80px; z-index: 2100;">
-    <div id="sysToast" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+<div class="toast-container position-fixed end-0 p-3" style="bottom: 80px; z-index: 2100; user-select: text;">
+    <div id="sysToast" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="user-select: text;">
         <div class="d-flex">
             <div class="toast-body fw-bold" id="sysToastBody"></div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -85,9 +85,13 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
         toastBody.innerHTML = `<i class="bi ${icon} me-2"></i> ${message}`;
 
         if (typeof bootstrap !== 'undefined') {
-            const toast = new bootstrap.Toast(toastEl, {
-                delay: 3000
-            });
+            // [버그 수정] Bootstrap Toast 인스턴스가 재사용되면서 이전 옵션(autohide: true)이 
+            // 덮어씌워지지 않아 에러 알림이 자동으로 사라지는 현상을 방지합니다.
+            let toast = bootstrap.Toast.getInstance(toastEl);
+            if (toast) toast.dispose(); // 기존 인스턴스 완전 폐기
+            
+            const options = type === 'danger' ? { autohide: false } : { autohide: true, delay: 3000 };
+            toast = new bootstrap.Toast(toastEl, options);
             toast.show();
         } else {
             alert(message);
@@ -145,12 +149,15 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
                 if (modal && typeof bootstrap !== 'undefined') {
                     bootstrap.Modal.getInstance(modal).hide();
                 }
+                return true; // 성공 상태 반환
             } else {
                 showToast(result.message || '오류가 발생했습니다.', 'danger');
+                return false; // 에러 상태 반환
             }
         } catch (error) {
             console.error('Form submission error:', error);
             showToast('통신 중 오류가 발생했습니다. (' + error.message + ')', 'danger');
+            return false; // 예외 발생 시 에러 상태 반환
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -698,7 +705,12 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
 
                 // [에러 방어] 사진 업로드 실패 시 점주에게 팝업으로 원인 안내
                 if (uploadErrors.length > 0) {
-                    alert('일부 이미지 업로드에 실패했습니다:\n' + uploadErrors.join('\n'));
+                    showToast('일부 이미지 업로드에 실패했습니다:<br>' + uploadErrors.join('<br>'), 'danger');
+                    
+                    // [버그 수정] 사진 업로드가 실패했을 경우 나머지 정보 저장을 강제로 중단합니다.
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                    return;
                 }
             }
 
@@ -729,13 +741,15 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
             }
 
             // 4. 나머지 폼 데이터(텍스트 등) 저장
-            await handleAjaxFormSubmit(event);
+            const isSuccess = await handleAjaxFormSubmit(event);
 
-            // 5. 성공 후 새로고침하여 UI 동기화
-            setTimeout(() => location.reload(), 800);
+            // 5. [버그 수정] 성공 시에만 새로고침하여 에러 메시지가 사라지는 현상 방지
+            if (isSuccess) {
+                setTimeout(() => location.reload(), 800);
+            }
 
         } catch (error) {
-            alert('저장 처리 중 오류가 발생했습니다: ' + error.message);
+            showToast('저장 처리 중 오류가 발생했습니다:<br>' + error.message, 'danger');
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnHtml;
         }

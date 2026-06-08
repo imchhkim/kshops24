@@ -1377,7 +1377,8 @@ function extractYoutubeIdFromUrl($url)
     if (empty($url)) return null;
     // 도메인 유효성 1차 검증 (이미지 경로 오인식 원천 차단)
     if (strpos($url, 'youtube.com') === false && strpos($url, 'youtu.be') === false) return null;
-    if (preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/\s]{11})%i', $url, $match)) {
+    // [버그 수정] 유튜브 쇼츠(shorts/) 형태의 주소에서도 비디오 ID(11자리)를 정상적으로 추출하도록 정규식 업그레이드
+    if (preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?|shorts)/|.*[?&]v=)|youtu\.be/)([^"&?/\s]{11})%i', $url, $match)) {
         return $match[1];
     }
     return null;

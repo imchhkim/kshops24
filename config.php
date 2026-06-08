@@ -21,7 +21,7 @@ define('GEMINI_API_KEY', 'AIzaSyCWK3it3CyucmwxHs9VnqTBp3xvTlcvSvs');
  * KShops24 AI 연동용 최신 Google Gemini 모델 정의
  * * 속도가 빠르고 텍스트 처리 비용이 매우 저렴한 1.5 Flash 모델을 권장합니다.
  */
-define('GEMINI_MODEL', 'gemini-1.0-pro'); // ⭕ 가장 안정적인 범용 모델인 gemini-1.0-pro 사용
+define('GEMINI_MODEL', 'Gemini 3.5 Pro'); // ⭕ 가장 안정적인 범용 모델인 Gemini 3.5 Pro 사용
 
 // [텔레그램 봇 설정]
 define('PS24_BOT_TOKEN', '8748825415:AAGfX5IByxVQJii57EL7JPBOzGLMk3Nq2KY');

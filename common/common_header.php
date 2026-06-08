@@ -72,6 +72,24 @@ function logAndDisplayError($type, $msg, $file = '', $line = '')
         }
     }
 
+    // [핵심] AJAX 통신 중이거나 JSON 응답을 기대하는 상황에서 HTML 에러 메시지가 
+    // 출력되어 프론트엔드가 JSON 파싱 오류(Unexpected token '<')를 내는 것을 원천 차단
+    $is_ajax = isset($_POST['ajax_update']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    $is_json_header = false;
+    foreach (headers_list() as $header) {
+        if (stripos($header, 'application/json') !== false) {
+            $is_json_header = true;
+            break;
+        }
+    }
+
+    if ($is_ajax || $is_json_header) {
+        while (ob_get_level() > 0) ob_end_clean();
+        if (!headers_sent()) header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'error', 'message' => "시스템 치명적 오류 ({$type}): " . $msg], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     // 2. 화면 표시 (Bootstrap 5 Alert)
     echo "
     <div class='container mt-3'>

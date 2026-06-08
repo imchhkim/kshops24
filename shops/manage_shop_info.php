@@ -113,7 +113,25 @@ $ui = json_decode($shop['ui_settings'] ?? '{}', true);
                     <dt class="col-5 text-muted mb-2">화폐 및 다국어</dt>
                     <dd class="col-7 mb-2">
                         <div class="mb-1">화폐: <strong><?php echo htmlspecialchars($ui['currency'] ?? 'PHP'); ?></strong></div>
-                        <div>다국어: <?php echo (($ui['is_multilingual'] ?? 0) == 1) ? '<span class="text-primary fw-bold">ON</span>' : '<span class="text-muted">OFF</span>'; ?></div>
+                        <div>다국어: 
+                            <?php 
+                            if (($ui['is_multilingual'] ?? 0) == 1) {
+                                $supported_langs = [
+                                    'en' => '영어', 'tl' => '따갈로그어', 'zh' => '중국어', 'ja' => '일본어',
+                                    'vi' => '베트남어', 'th' => '태국어', 'id' => '인도네시아어', 'ms' => '말레이시아어',
+                                    'es' => '스페인어', 'fr' => '프랑스어', 'de' => '독일어', 'ru' => '러시아어'
+                                ];
+                                $langs = ['한국어'];
+                                $lang1 = $ui['multilingual_lang1'] ?? 'none';
+                                $lang2 = $ui['multilingual_lang2'] ?? 'none';
+                                if ($lang1 !== 'none') $langs[] = $supported_langs[$lang1] ?? strtoupper($lang1);
+                                if ($lang2 !== 'none') $langs[] = $supported_langs[$lang2] ?? strtoupper($lang2);
+                                echo '<span class="text-danger fw-bold">ON (' . implode(', ', $langs) . ')</span>';
+                            } else {
+                                echo '<span class="text-muted">OFF</span>';
+                            }
+                            ?>
+                        </div>
                     </dd>
                     
                     <dt class="col-5 text-muted mb-2">영업 시간</dt>

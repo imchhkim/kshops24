@@ -8,6 +8,10 @@
 // [버그 수정] 불필요한 출력 버퍼링 차단
 ob_start();
 
+// [성능 최적화] 고해상도 이미지 처리를 위한 메모리 및 실행 시간 확장
+ini_set('memory_limit', '512M');
+set_time_limit(120);
+
 // 1. 서버 루트 절대 경로 정의
 $root_path = $_SERVER['DOCUMENT_ROOT']; // /home/u743828642/domains/kshops24.com/public_html
 
@@ -20,6 +24,10 @@ while (ob_get_level()) {
     ob_end_clean();
 }
 
+// [신규 보안] JSON 출력 직전까지 발생하는 모든 경고/에러 메시지(HTML)를 다시 버퍼에 가두어 
+// JSON 파싱 에러(Unexpected token '<')를 원천 차단합니다.
+ob_start();
+
 // [IDE 경고 방지용] $pdo 변수가 PDO 객체임을 명시
 /** @var PDO $pdo */
 
@@ -28,7 +36,15 @@ header('Content-Type: application/json');
 
 // 1. [보안] 권한 체크: 상점 관리자 또는 슈퍼 관리자만 접근 허용
 if (!isset($_SESSION['shop_id']) && !isset($_SESSION['admin_logged_in'])) {
+    while (ob_get_level()) ob_end_clean();
     echo json_encode(['status' => 'error', 'message' => 'Unauthorized Access']);
+    exit;
+}
+
+if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    $err_code = $_FILES['image']['error'] ?? 'No File';
+    while (ob_get_level()) ob_end_clean();
+    echo json_encode(['status' => 'error', 'message' => 'Upload failed. Error Code: ' . $err_code]);
     exit;
 }
 
@@ -48,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     $allowed_folders = ['bg', 'shopimages', 'logo', 'itemboard', 'itemimages']; // 허용된 폴더명으로 통일
 
     if (!in_array($table, $allowed_tables) || !in_array($column, $allowed_columns)) {
+        while (ob_get_level()) ob_end_clean();
         echo json_encode(['status' => 'error', 'message' => 'Forbidden Access: Invalid Table/Column']);
         exit;
     }
@@ -57,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     }
 
     if (!$target_id) {
+        while (ob_get_level()) ob_end_clean();
         echo json_encode(['status' => 'error', 'message' => 'Target ID is required']);
         exit;
     }
@@ -74,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     $subdomain = $stmt->fetchColumn();
 
     if (!$subdomain) {
+        while (ob_get_level()) ob_end_clean();
         echo json_encode(['status' => 'error', 'message' => 'Subdomain not found for Shop ID: ' . $query_shop_id]);
         exit;
     }
@@ -99,9 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
     $src_img = null;
     if ($file_ext === 'png') $src_img = @imagecreatefrompng($source_file);
     elseif ($file_ext === 'gif') $src_img = @imagecreatefromgif($source_file);
+    elseif ($file_ext === 'webp') {
+        if (function_exists('imagecreatefromwebp')) $src_img = @imagecreatefromwebp($source_file);
+        else $src_img = @imagecreatefromjpeg($source_file); // Fallback attempt
+    }
     else $src_img = @imagecreatefromjpeg($source_file);
 
     if (!$src_img) {
+        while (ob_get_level()) ob_end_clean();
         echo json_encode(['status' => 'error', 'message' => 'Failed to load image resource']);
         exit;
     }
@@ -139,7 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
             break;
         case 'img_path':  // 일반 갤러리: 원본 비율 유지
             $new_width = 1000;
-            $new_height = ($width > 0) ? ($new_width * ($height / $width)) : 800;
+            // [버그 수정] PHP 8.1+에서 float 형태의 크기값이 int 형식을 기대하는 내부 함수에 전달될 때 
+            // 발생하는 암시적 변환(Implicit conversion) 에러를 방지하기 위해 강제 정수형(int) 변환
+            $new_height = ($width > 0) ? (int)round($new_width * ($height / $width)) : 800;
             $is_crop = false;
             break;
         case 'board_img_path': // 메뉴판 이미지: 3:4 세로 비율 표준화
@@ -183,13 +209,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
 
     // 6. [파일 저장 및 DB 연동]
     // WebP 포맷으로 압축(품질 80)하여 단일 파일만 저장 (Inode 폭증 방지)
-    if (imagewebp($dst_img, $target_file, 80)) {
+    $save_result = false;
+    if (function_exists('imagewebp')) {
+        $save_result = imagewebp($dst_img, $target_file, 80);
+    } else {
+        // WebP 미지원 환경 대비 JPEG 폴백 (파일명은 .webp로 유지되나 실제 데이터는 JPG가 됨)
+        $save_result = imagejpeg($dst_img, $target_file, 85);
+    }
+
+    if ($save_result) {
         // 과거 존재했던 썸네일(thumb_) 추가 생성 로직은 Inode 최적화를 위해 완전히 제거됨.
 
         try {
             // [Fix] shop_items 테이블은 폼 전송 시 DB에 저장하므로, 여기서는 파일만 업로드하고 DB Insert는 건너뜀
             // 이를 통해 '이름 없는 빈 메뉴'가 생성되는 좀비 레코드 버그 방지
             if ($table === 'shop_items' || ($table === 'shops' && $column === 'bg_path')) {
+                while (ob_get_level()) ob_end_clean();
                 echo json_encode(['status' => 'success', 'path' => $db_path]);
                 exit;
             }
@@ -197,8 +232,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
             if ($mode === 'insert') {
                 // 갤러리 추가 (shop_images 테이블)
                 // sort_order 컬럼이 있다면 기본값 0을 함께 입력해줍니다.
-                $sql = "INSERT INTO $table (shop_id, $column) VALUES (?, ?)";
-                $pdo->prepare($sql)->execute([$target_id, $db_path]);
+                // [버그 수정] MySQL Strict Mode에서 기본값이 없어서 발생하는 에러 원천 차단
+                if ($table === 'shop_images' || $table === 'shop_item_boards') {
+                    $sql = "INSERT INTO $table (shop_id, $column, sort_order) VALUES (?, ?, 0)";
+                    $pdo->prepare($sql)->execute([$target_id, $db_path]);
+                } else {
+                    $sql = "INSERT INTO $table (shop_id, $column) VALUES (?, ?)";
+                    $pdo->prepare($sql)->execute([$target_id, $db_path]);
+                }
                 $insert_id = $pdo->lastInsertId();
             } else {
                 // [수정] 업데이트 모드일 경우, DB에 저장된 기존 이미지 파일을 먼저 삭제하여 용량 낭비를 방지합니다.
@@ -226,21 +267,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['image'])) {
 
             // [테스트 모듈 호출] 설정 파일의 ENABLE_TASK_TEST가 true일 때만 작동
             if (defined('ENABLE_TASK_TEST') && ENABLE_TASK_TEST === true) {
-                ob_start();
-                include $_SERVER['DOCUMENT_ROOT'] . '/task_test.php';
-                ob_end_clean();
+                $test_file_path = $_SERVER['DOCUMENT_ROOT'] . '/task_test.php';
+                if (file_exists($test_file_path)) {
+                    ob_start();
+                    include $test_file_path;
+                    ob_end_clean();
+                }
             }
 
+            while (ob_get_level()) ob_end_clean();
             echo json_encode(['status' => 'success', 'path' => $db_path, 'insert_id' => $insert_id ?? 0]);
+            exit;
         } catch (Exception $e) {
+            while (ob_get_level()) ob_end_clean();
             echo json_encode(['status' => 'error', 'message' => 'DB Sync Error: ' . $e->getMessage()]);
+            exit;
         }
     } else {
+        while (ob_get_level()) ob_end_clean();
         echo json_encode(['status' => 'error', 'message' => 'Failed to save image to: ' . $target_dir]);
+        exit;
     }
 
     imagedestroy($dst_img);
     imagedestroy($src_img);
 } else {
+    while (ob_get_level()) ob_end_clean();
     echo json_encode(['status' => 'error', 'message' => '이미지 파일이 전송되지 않았거나, 업로드 용량 제한을 초과했습니다.']);
+    exit;
 }

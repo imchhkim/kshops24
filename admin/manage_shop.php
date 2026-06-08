@@ -25,8 +25,19 @@ if (!isset($_GET['view']) && (isset($_GET['board_page']) || isset($_GET['f_board
 // ---------------------------------------------------------
 // 2. [위임] 탭 전용 액션(POST/GET/AJAX) 모듈 호출
 // ---------------------------------------------------------
+$tab_files = [
+    'info'     => 'manage_shop_tab_info.php',
+    'payments' => 'manage_shop_tab_payments.php',
+    'message'  => 'manage_shop_tab_message.php',
+    'logs'     => 'manage_shop_tab_logs.php',
+    'files'    => 'manage_shop_tab_files.php',
+    'resource' => 'manage_shop_tab_resource.php'
+];
+
 $tab_mode = 'action';
-include __DIR__ . '/manage_shop_tabs.php';
+foreach ($tab_files as $file) {
+    if (file_exists(__DIR__ . '/' . $file)) include __DIR__ . '/' . $file;
+}
 
 $s = null;
 
@@ -105,6 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($pdo)) {
                     'general_notice',
                     'shop_intro',
                     'shop_description',
+                    'is_sample_shop',
                     'custom_free_orders',
                     'custom_free_disk_mb'
                 ];
@@ -263,10 +275,28 @@ if ($shop_id > 0) {
         $ui = json_decode($s['ui_settings'] ?? '{}', true);
 
         // ---------------------------------------------------------
+        // [공용 헬퍼 함수] 탭 내부에서 공통으로 사용할 함수 정의
+        // ---------------------------------------------------------
+        if (!function_exists('renderPaymentTableHTML')) {
+            function renderPaymentTableHTML($payment_list, $shop_id, $f_year, $f_month, $f_note, $sort_col, $sort_dir, $pay_type_labels, $total_pay_pages, $pay_page) {
+                // (기존 manage_shop_tabs.php 에 있던 renderPaymentTableHTML 내용 이동)
+                // ... (코드 생략, 실제 적용 시 기존 함수 내용을 붙여넣으세요) ...
+            }
+        }
+        if (!function_exists('renderBoardListHTML')) {
+            function renderBoardListHTML($board_list, $shop_id, $f_keyword, $board_type, $total_pages, $current_page) {
+                // (기존 manage_shop_tabs.php 에 있던 renderBoardListHTML 내용 이동)
+                // ... (코드 생략, 실제 적용 시 기존 함수 내용을 붙여넣으세요) ...
+            }
+        }
+
+        // ---------------------------------------------------------
         // 5. [위임] 하위 탭들 UI 렌더링에 필요한 데이터 로딩
         // ---------------------------------------------------------
         $tab_mode = 'data';
-        include __DIR__ . '/manage_shop_tabs.php';
+        foreach ($tab_files as $file) {
+            if (file_exists(__DIR__ . '/' . $file)) include __DIR__ . '/' . $file;
+        }
     }
 }
 
@@ -343,288 +373,49 @@ if (empty($message) && isset($_GET['msg'])) {
         </div>
     </div>
 
-    <?php if ($s): ?>
+<?php if ($s): ?>
         <!-- 상점이 선택된 경우에만 상세 관리 패널 노출 -->
         <div class="row">
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0 text-start">
-                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                        <div class="fs-4 fw-bold text-dark d-flex align-items-center">
-                            <i class="bi bi-info-circle-fill me-2 text-primary"></i>
-                            <span>상점 기본 정보</span>
-                        </div>
+                    <!-- [수정] 모든 기능을 동일한 레벨의 탭 네비게이션으로 통합 -->
+                    <div class="inner-tab-container mt-3 px-4 border-bottom-0 mb-0">
+                        <nav class="inner-tab-nav">
+                            <a class="ajax-tab-link <?= $active_tab == 'info' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=info"><i class="bi bi-info-circle me-1"></i>상점 정보</a>
+                            <a class="ajax-tab-link <?= $active_tab == 'payments' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=payments"><i class="bi bi-credit-card me-1"></i>결제 수납 관리</a>
+                            <a class="ajax-tab-link <?= $active_tab == 'message' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=message"><i class="bi bi-envelope me-1"></i>메시지/이메일 관리</a>
+                            <a class="ajax-tab-link <?= $active_tab == 'logs' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=logs"><i class="bi bi-journal-text me-1"></i>로그 관리</a>
+                            <a class="ajax-tab-link <?= $active_tab == 'files' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=files"><i class="bi bi-database me-1"></i>DB/파일 용량 분석</a>
+                            <a class="ajax-tab-link <?= $active_tab == 'resource' ? 'active fw-bold' : '' ?>" href="admin_view.php?page=manage_shop&id=<?= $shop_id ?>&view=resource"><i class="bi bi-hdd-stack me-1"></i>상점 리소스 관리</a>
+                        </nav>
                     </div>
-                    <div class="card-body bg-light-subtle p-4">
+
+                    <div class="card-body bg-light-subtle p-4 border-top tab-content border-0">
                         <div class="row g-4">
-                            <!-- 1. 기본 정보 -->
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-person-badge me-2"></i>기본 정보 및 계정</h6>
-                                    <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editBasicModal"><i class="bi bi-pencil me-1"></i>수정</button>
-                                </div>
-
-                                <dl class="row small mb-0">
-                                    <dt class="col-sm-5 text-muted">업종 / 상태</dt>
-                                    <dd class="col-sm-7"><span
-                                            class="badge bg-primary fw-normal"><?= htmlspecialchars($s['category'] ?? '-') ?></span>
-                                        / <span
-                                            class="badge bg-<?= ($s['status'] == 'active' ? 'success' : 'warning') ?> fw-normal"><?= strtoupper($s['status']) ?></span>
-                                    </dd>
-                                    <dt class="col-sm-5 text-muted">상점 주소</dt>
-                                    <dd class="col-sm-7"><a href="/<?= $s['subdomain'] ?>" target="_blank"
-                                            class="text-decoration-none fw-bold">/<?= htmlspecialchars($s['subdomain']) ?>
-                                            <i class="bi bi-box-arrow-up-right ms-1"></i></a></dd>
-
-                                    <dt class="col-sm-5 text-muted">상점명</dt>
-                                    <dd class="col-sm-7 fw-bold"><?= htmlspecialchars($s['shop_name']) ?> <span
-                                            class="text-muted fw-normal">(<?= htmlspecialchars($s['shop_name_en'] ?? '-') ?>)</span>
-                                    </dd>
-                                    <dt class="col-sm-5 text-muted">관리자명</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($s['manager_name'] ?? '-') ?> <span
-                                            class="text-muted fw-normal">(<?= htmlspecialchars($s['manager_name_en'] ?? '-') ?>)</span>
-                                    </dd>
-                                    <dt class="col-sm-5 text-muted">로그인 이메일(상점관리자 ID)</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($s['manager_email']) ?></dd>
-                                    <dt class="col-sm-5 text-muted">연결 도메인</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($s['custom_domain'] ?: '-') ?></dd>
-                                </dl>
-                            </div>
-
-                            <!-- 2. 연락처 및 위치 -->
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-geo-alt me-2"></i>연락처 및 위치 정보</h6>
-                                    <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editContactModal"><i class="bi bi-pencil me-1"></i>수정</button>
-                                </div>
-
-                                <dl class="row small mb-0">
-                                    <dt class="col-sm-4 text-muted">휴대전화</dt>
-                                    <dd class="col-sm-8">
-                                        <?= htmlspecialchars(function_exists('formatPHPhone') && $s['phone_mobile'] ? formatPHPhone($s['phone_mobile']) : ($s['phone_mobile'] ?: '-')) ?>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">매장전화</dt>
-                                    <dd class="col-sm-8">
-                                        <?= htmlspecialchars(function_exists('formatPHPhone') && $s['phone_landline'] ? formatPHPhone($s['phone_landline']) : ($s['phone_landline'] ?: '-')) ?>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">카카오톡 ID</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['kakao_id'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">카카오 채널 ID</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['kakao_channel_id'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">텔레그램 설정</dt>
-                                    <dd class="col-sm-8 text-truncate">
-                                        상태: <?= ($s['use_telegram_alert'] == 'Y') ? '<span class="text-success fw-bold">활성</span>' : '<span class="text-danger fw-bold">비활성</span>' ?><br>
-                                        Chat ID: <?= htmlspecialchars($s['telegram_chat_id'] ?: '미설정') ?><br>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">텔레그램 수신 알림</dt>
-                                    <dd class="col-sm-8 text-truncate">
-                                        <span class="big text-muted">수신:
-                                            <?php
-                                            $alert_types = explode(',', $s['telegram_alert_types'] ?? 'order,cancel');
-                                            $alert_labels = [];
-                                            if (in_array('order', $alert_types)) $alert_labels[] = '주문';
-                                            if (in_array('cancel', $alert_types)) $alert_labels[] = '취소';
-                                            if (in_array('message', $alert_types)) $alert_labels[] = '본사알림';
-                                            if (in_array('review', $alert_types)) $alert_labels[] = '리뷰';
-                                            echo $alert_labels ? implode(', ', $alert_labels) : '없음';
-                                            ?>
-                                        </span>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">지역</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['location_city'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">실제 주소</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['physical_address'] ?: '-') ?></dd>
-                                </dl>
-                            </div>
-
-                            <!-- 3. 배달 및 운영 정책 -->
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0">
-                                        <i class="bi <?= in_array($s['category'], ['fnb', 'cafe', 'mart']) ? 'bi-truck' : 'bi-clock-history' ?> me-2"></i>
-                                        <?= in_array($s['category'], ['fnb', 'cafe', 'mart']) ? '배달 및 운영 정책' : '운영 정책' ?>
-                                    </h6>
-                                    <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editDeliveryModal"><i class="bi bi-pencil me-1"></i>수정</button>
-                                </div>
-
-                                <dl class="row small mb-0">
-                                    <dt class="col-sm-4 text-muted">영업 시간</dt>
-                                    <dd class="col-sm-8">
-                                        <?php
-                                        $bh = $s['business_hours'] ?? '';
-                                        if (!empty($bh) && ($bh[0] === '{' || $bh[0] === '[')) {
-                                            echo '<span class="badge bg-light text-primary border border-primary-subtle">고급 설정 (요일별)</span>';
+                            <div class="col-12 m-0 p-0">
+                                <div class="tab-content border-0 p-0 m-0 w-100">
+                                    <?php 
+                                    $tab_mode = 'view';
+                                    foreach ($tab_files as $tab_id => $file) {
+                                        $is_active = ($active_tab == $tab_id) ? 'show active' : '';
+                                        echo "<div class=\"tab-pane fade {$is_active}\" id=\"{$tab_id}\">";
+                                        
+                                        if (file_exists(__DIR__ . '/' . $file)) {
+                                            include __DIR__ . '/' . $file;
                                         } else {
-                                            echo htmlspecialchars($bh ?: '-');
+                                            echo "<div class='text-center py-5 text-muted'><i class='bi bi-tools fs-1 opacity-25'></i><h6 class='mt-3'>기능 분리(리팩토링) 진행 중... ({$file})</h6></div>";
                                         }
-                                        ?>
-                                    </dd>
-                                    <?php if (in_array($s['category'], ['fnb', 'cafe', 'mart'])): ?>
-                                    <dt class="col-sm-4 text-muted">배달 가능 시간</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['delivery_hours'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">최소 주문 금액</dt>
-                                    <dd class="col-sm-8 text-primary fw-bold">₱ <?= number_format((int)$s['min_delivery_amount']) ?></dd>
-                                    <dt class="col-sm-4 text-muted">예상 배달 시간</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['estimated_delivery_time'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">배달비 안내</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['delivery_fee_info'] ?: '-') ?></dd>
-                                    <?php endif; ?>
-                                    <dt class="col-sm-4 text-muted">결제 수단</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['payment_methods'] ?: '-') ?></dd>
-                                    <?php if (in_array($s['category'], ['fnb', 'cafe', 'mart'])): ?>
-                                    <dt class="col-sm-4 text-muted">배달 지원 여부</dt>
-                                    <dd class="col-sm-8">
-                                        <?= ($s['is_delivery_available'] ?? 1) == 1 ? '<span class="text-success fw-bold">가능</span>' : '<span class="text-danger fw-bold">불가</span>' ?>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">매장픽업 가능 여부</dt>
-                                    <dd class="col-sm-8">
-                                        <?= ($s['is_pickup_available'] ?? 1) == 1 ? '<span class="text-success fw-bold">가능</span>' : '<span class="text-danger fw-bold">불가</span>' ?>
-                                    </dd>
-                                    <?php endif; ?>
-                                </dl>
-                            </div>
-                            <!-- 4. UI 설정 및 기타 -->
-                            <div class="col-md-6">
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-display me-2"></i>UI 설정 및 시스템</h6>
-                                    <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editUiModal"><i class="bi bi-pencil me-1"></i>수정</button>
+                                        
+                                        echo "</div>";
+                                    }
+                                    ?>
                                 </div>
-
-                                <dl class="row small mb-0">
-                                    <dt class="col-sm-4 text-muted">스킨 / 폰트</dt>
-                                    <dd class="col-sm-8"><?= htmlspecialchars($s['shop_skin'] ?? 'default') ?> /
-                                        <?= htmlspecialchars($s['shop_font'] ?? 'Pretendard') ?></dd>
-                                    <dt class="col-sm-4 text-muted">메인 홍보 문구</dt>
-                                    <dd class="col-sm-8 text-truncate"
-                                        title="<?= htmlspecialchars($s['main_title'] ?? '') ?>">
-                                        <?= htmlspecialchars($s['main_title'] ?: '-') ?></dd>
-                                    <dt class="col-sm-4 text-muted">기능 노출 현황</dt>
-                                    <dd class="col-sm-8">
-                                        <span
-                                            class="badge <?= ($s['is_show_main_title'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">메인문구</span>
-                                        <span
-                                            class="badge <?= ($s['is_show_story'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">스토리</span>
-                                        <span
-                                            class="badge <?= ($s['is_show_gallery'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">갤러리</span>
-                                        <span
-                                            class="badge <?= ($s['is_show_map'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">지도</span>
-                                        <span
-                                            class="badge <?= ($s['is_show_review'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">리뷰</span>
-                                        <span
-                                            class="badge <?= ($s['is_show_delivery'] ?? 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">배달</span>
-                                        <span
-                                            class="badge <?= (($ui['is_multilingual'] ?? 0) == 1) ? 'bg-primary' : 'bg-secondary opacity-50' ?>">다국어</span>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">개별 리소스 한도</dt>
-                                    <dd class="col-sm-8">
-                                        <span class="text-info fw-bold">주문:</span>
-                                        <?= $s['custom_free_orders'] !== null ? number_format($s['custom_free_orders']) . '건' : '<span class="text-muted">기본값</span>' ?>
-                                        |
-                                        <span class="text-info fw-bold">용량:</span>
-                                        <?= $s['custom_free_disk_mb'] !== null ? number_format($s['custom_free_disk_mb']) . 'MB' : '<span class="text-muted">기본값</span>' ?>
-                                    </dd>
-                                    <dt class="col-sm-4 text-muted">가입일 / 최종수정</dt>
-                                    <dd class="col-sm-8"><?= date('y-m-d H:i', strtotime($s['created_at'])) ?> <span
-                                            class="text-muted mx-1">|</span>
-                                        <?= date('y-m-d H:i', strtotime($s['updated_at'])) ?></dd>
-                                </dl>
                             </div>
-
-                            <!-- 5. 공지사항 및 상점 설명 -->
-                            <?php if (!empty($s['urgent_notice']) || !empty($s['general_notice']) || !empty($s['shop_description'])): ?>
-                                <div class="col-12 mt-2">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-megaphone me-2"></i>공지사항 및 상점 설명</h6>
-                                        <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editUiModal"><i class="bi bi-pencil me-1"></i>수정</button>
-                                    </div>
-                                    <div class="bg-white p-3 border rounded shadow-sm">
-                                        <?php if (!empty($s['urgent_notice'])): ?>
-                                            <div class="mb-2"><span class="badge bg-danger me-2 align-top">긴급 공지</span> 
-                                                <div class="small text-danger fw-bold d-inline-block"><?= $s['urgent_notice'] ?></div>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($s['general_notice'])): ?>
-                                            <div class="mb-2"><span class="badge bg-info text-dark me-2 align-top">일반 공지</span> 
-                                                <div class="small d-inline-block"><?= $s['general_notice'] ?></div>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($s['shop_intro']) || !empty($s['shop_description'])): ?>
-                                            <div class="mb-0"><span class="badge bg-secondary me-2 align-top">상점 설명</span> <span
-                                                    class="small fw-bold me-2"><?= htmlspecialchars($s['shop_intro'] ?? '') ?></span>
-                                                <div class="small text-muted mt-2 pt-2 border-top"><?= $s['shop_description'] ?? '' ?></div>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-
-            <div class="col-12 mb-1">
-                <div class="fs-4 fw-bold text-dark d-flex align-items-center">
-                    <i class="bi bi-sliders2-vertical me-2 text-warning"></i>
-                    <span>상점 상태 수정</span>
-                </div>
-            </div>
-            <!-- [신규] 상점 상태 수동 섹션 -->
-            <div class="mt-2 p-3 bg-white border rounded shadow-sm border-start border-4 border-warning">
-
-                <form method="POST" action="admin_view.php?page=manage_shop&id=<?= $shop_id ?>">
-                    <input type="hidden" name="action" value="update_manual_status">
-
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted mb-1">상태 변경</label>
-                            <select name="manual_status"
-                                class="form-select form-select-sm fw-bold <?= $s['status'] === 'active' ? 'text-success' : 'text-danger' ?>">
-                                <option value="active" <?= $s['status'] === 'active' ? 'selected' : '' ?>>정상영업 (active)
-                                </option>
-                                <option value="inactive" <?= $s['status'] === 'inactive' ? 'selected' : '' ?>>휴점
-                                    (inactive)</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted mb-1">적용 일시</label>
-                            <input type="datetime-local" name="status_date" class="form-control form-control-sm"
-                                value="<?= date('Y-m-d\TH:i') ?>" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted mb-1">변경 사유</label>
-                        <input type="text" name="status_reason" class="form-control form-control-sm"
-                            placeholder="예: 관리자 수동 처리, 연체 등" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted mb-1">발송할 안내 메시지</label>
-                        <select name="message_template" class="form-select form-select-sm border-primary">
-                            <option value="">(발송 안 함 - 상태만 변경)</option>
-                            <?php foreach ($message_templates as $tpl_key => $tpl): ?>
-                                <option value="<?= htmlspecialchars($tpl_key) ?>"><?= htmlspecialchars($tpl['title']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text x-small text-muted mt-1"><i class="bi bi-info-circle me-1"></i>템플릿을 선택하면
-                            상태 변경과 동시에 상점에 쪽지가 발송됩니다.</div>
-                    </div>
-
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-warning btn-sm fw-bold px-4 shadow-sm"
-                            onclick="return confirm('설정한 내용으로 상점 상태를 변경하시겠습니까?');">
-                            <i class="bi bi-check-lg me-1"></i> 상태 변경 적용하기
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <?php
-        $tab_mode = 'view';
-        include __DIR__ . '/manage_shop_tabs.php';
-        ?>
 </div> <!-- // [수정] 열려있던 <div class="row">를 안전하게 닫습니다. -->
 <?php else: ?>
     <!-- 상점이 선택되지 않은 경우 출력되는 빈 화면 안내 -->
@@ -736,6 +527,14 @@ if (empty($message) && isset($_GET['msg'])) {
                             <label class="item-attr-label">관리자 이메일 (ID)</label>
                             <input class="form-control bg-light" name="manager_email" type="email"
                                 value="<?= htmlspecialchars($s['manager_email']) ?>" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="item-attr-label text-primary">샘플 상점 설정 (데이터 이관용)</label>
+                            <select name="is_sample_shop" class="form-select border-primary-subtle">
+                                <option value="n" <?= ($s['is_sample_shop'] ?? 'n') === 'n' ? 'selected' : '' ?>>일반 상점 (is_sample_shop = n)</option>
+                                <option value="y" <?= ($s['is_sample_shop'] ?? 'n') === 'y' ? 'selected' : '' ?>>샘플 상점 (is_sample_shop = y)</option>
+                            </select>
+                            <div class="form-text small"><i class="bi bi-info-circle me-1"></i>'Y'로 설정된 상점만 배포 사령탑의 '데이터 특급 이관' 기능을 사용할 수 있습니다.</div>
                         </div>
                         <div class="mb-3">
                             <label class="item-attr-label text-primary">관리자 비밀번호 변경 <small class="text-muted fw-normal">(변경
@@ -1763,11 +1562,10 @@ if (empty($message) && isset($_GET['msg'])) {
                     const url = tabLink.href;
 
                     // 탭 UI 즉시 변경
-                    document.querySelectorAll('.ajax-tab-link').forEach(el => el.classList.remove(
-                        'active'));
-                    tabLink.classList.add('active');
+                    document.querySelectorAll('.ajax-tab-link').forEach(el => el.classList.remove('active', 'fw-bold'));
+                    tabLink.classList.add('active', 'fw-bold');
 
-                    const tabContentContainer = document.querySelector('.tab-content.border-0');
+                    const tabContentContainer = document.querySelector('.card-body.tab-content.border-0');
                     if (tabContentContainer) {
                         tabContentContainer.style.opacity = '0.4';
                         tabContentContainer.style.pointerEvents = 'none';
@@ -1779,7 +1577,7 @@ if (empty($message) && isset($_GET['msg'])) {
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, 'text/html');
 
-                        const newContent = doc.querySelector('.tab-content.border-0');
+                        const newContent = doc.querySelector('.card-body.tab-content.border-0');
                         if (newContent && tabContentContainer) {
                             tabContentContainer.innerHTML = newContent.innerHTML;
                             window.history.pushState({

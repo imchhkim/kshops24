@@ -229,4 +229,8 @@ return [
     '이 상점에서의 경험은 어떠셨나요?' => 'Trải nghiệm của bạn tại cửa hàng này như thế nào?',
     '작성하신 리뷰를 정말 삭제하시겠습니까?' => 'Bạn có chắc chắn muốn xóa bài đánh giá mình đã viết không?',
     '리뷰 수정' => 'Chỉnh sửa đánh giá',
+    '예약가능시간' => 'Thời gian đặt chỗ có sẵn',
+    '서비스 비용 안내:' => 'Thông tin về phí dịch vụ:',
+    '예약 시 안내' => 'Hướng dẫn đặt chỗ',
+    '서비스 방식:' => 'Phương thức phục vụ:',
 ];

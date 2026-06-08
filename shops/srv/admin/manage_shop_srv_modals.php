@@ -10,6 +10,10 @@ if (!isset($shop_id)) exit;
 <div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form id="itemForm" method="POST" action="manage_shop.php?pg=manage_shop_srv" onsubmit="prepareYoutubeUrls(); saveImageBatch(event, 'item_images');" class="modal-content border-0 shadow-lg">
+            <!-- [버그 수정] 서버 라우팅 길잃음 방지 (AJAX 통신 꼬임 원천 차단) -->
+            <input type="hidden" name="pg" value="manage_shop_srv">
+            <!-- 서버 통신 시 데이터 누락 방지를 위한 액션 타입 히든 필드 -->
+            <input type="hidden" id="modal_action_type" name="add_item" value="1">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold">서비스 설정</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -200,6 +204,8 @@ if (!isset($shop_id)) exit;
 <div class="modal fade" id="editPolicyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content border-0 shadow-lg" method="POST" action="manage_shop.php?pg=manage_shop_srv_policy">
+            <!-- [버그 수정] 서버 라우팅 길잃음 방지 -->
+            <input type="hidden" name="pg" value="manage_shop_srv_policy">
             <div class="modal-header bg-light border-0 py-3">
                 <h5 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>서비스/예약 정책 수정</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

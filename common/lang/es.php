@@ -229,4 +229,8 @@ return [
     '이 상점에서의 경험은 어떠셨나요?' => '¿Cómo fue tu experiencia en esta tienda?',
     '작성하신 리뷰를 정말 삭제하시겠습니까?' => '¿Estás seguro de que quieres borrar la reseña que escribiste?',
     '리뷰 수정' => 'Editar reseña',
+    '예약가능시간' => 'Horarios de reserva disponibles',
+    '서비스 비용 안내:' => 'Información sobre las tarifas del servicio:',
+    '예약 시 안내' => 'Guía de reservas',
+    '서비스 방식:' => 'Método de servicio:',
 ];

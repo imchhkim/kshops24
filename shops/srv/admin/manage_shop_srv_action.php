@@ -288,11 +288,13 @@ if (isset($_GET['del_item'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
+    try {
     $is_best = isset($_POST['is_best']) ? 1 : 0;
     $is_new = isset($_POST['is_new']) ? 1 : 0;
     $is_soldout = isset($_POST['is_soldout']) ? 1 : 0;
     $is_hide = isset($_POST['is_hide']) ? 1 : 0;
     $cat_id = !empty($_POST['cat_id']) ? (int)$_POST['cat_id'] : null;
+        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
     $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
     $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
     $trade_type = $_POST['trade_type'] ?? '방문 서비스';
@@ -300,12 +302,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
     // [신규] POST 데이터를 스캔하여 다국어 데이터 JSON 동적 처리
     $translations = [];
     foreach ($_POST as $key => $value) {
-        if (strpos($key, 'item_name_') === 0) {
+        if (strpos($key, 'item_name_') === 0 && is_string($value)) {
             $langCode = str_replace('item_name_', '', $key);
-            if (!empty(trim($value)) || !empty(trim($_POST['item_info_' . $langCode] ?? ''))) {
+            $info_val = isset($_POST['item_info_' . $langCode]) && is_string($_POST['item_info_' . $langCode]) ? $_POST['item_info_' . $langCode] : '';
+            if (!empty(trim($value)) || !empty(trim($info_val))) {
                 $translations[$langCode] = [
                     'item_name' => trim($value),
-                    'item_info' => trim($_POST['item_info_' . $langCode] ?? '')
+                    'item_info' => trim($info_val)
                 ];
             }
         }
@@ -318,7 +321,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
         $cat_id,
         $trade_type,
         $_POST['item_name'],
-        $_POST['item_price'],
+            $item_price,
         $discount_price,
         $discount_rate,
         $_POST['item_info'] ?? '',
@@ -341,15 +344,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
     }
     echo "<script>location.href='manage_shop.php?pg={$redirect_pg}&msg=item_added';</script>";
     exit;
+    } catch (Throwable $e) {
+        if (isset($_POST['ajax_update'])) {
+            while (ob_get_level()) ob_end_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => '서비스 등록 중 오류가 발생했습니다: ' . $e->getMessage()]);
+            exit;
+        }
+        echo "<script>alert('오류 발생: " . addslashes($e->getMessage()) . "'); history.back();</script>";
+        exit;
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
+    try {
     $item_id = (int)$_POST['item_id'];
     $is_best = isset($_POST['is_best']) ? 1 : 0;
     $is_new = isset($_POST['is_new']) ? 1 : 0;
     $is_soldout = isset($_POST['is_soldout']) ? 1 : 0;
     $is_hide = isset($_POST['is_hide']) ? 1 : 0;
     $cat_id = !empty($_POST['cat_id']) ? (int)$_POST['cat_id'] : null;
+        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
     $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
     $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
     $trade_type = $_POST['trade_type'] ?? '방문 서비스';
@@ -357,12 +372,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
     // [신규] POST 데이터를 스캔하여 다국어 데이터 JSON 동적 처리
     $translations = [];
     foreach ($_POST as $key => $value) {
-        if (strpos($key, 'item_name_') === 0) {
+        if (strpos($key, 'item_name_') === 0 && is_string($value)) {
             $langCode = str_replace('item_name_', '', $key);
-            if (!empty(trim($value)) || !empty(trim($_POST['item_info_' . $langCode] ?? ''))) {
+            $info_val = isset($_POST['item_info_' . $langCode]) && is_string($_POST['item_info_' . $langCode]) ? $_POST['item_info_' . $langCode] : '';
+            if (!empty(trim($value)) || !empty(trim($info_val))) {
                 $translations[$langCode] = [
                     'item_name' => trim($value),
-                    'item_info' => trim($_POST['item_info_' . $langCode] ?? '')
+                    'item_info' => trim($info_val)
                 ];
             }
         }
@@ -398,7 +414,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
         $cat_id,
         $trade_type,
         $_POST['item_name'],
-        $_POST['item_price'],
+            $item_price,
         $discount_price,
         $discount_rate,
         $_POST['item_info'] ?? '',
@@ -423,6 +439,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
     }
     echo "<script>location.href='manage_shop.php?pg={$redirect_pg}&msg=item_updated';</script>";
     exit;
+    } catch (Throwable $e) {
+        if (isset($_POST['ajax_update'])) {
+            while (ob_get_level()) ob_end_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => '서비스 수정 중 오류가 발생했습니다: ' . $e->getMessage()]);
+            exit;
+        }
+        echo "<script>alert('오류 발생: " . addslashes($e->getMessage()) . "'); history.back();</script>";
+        exit;
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_item_order'])) {

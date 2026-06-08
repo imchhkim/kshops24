@@ -427,7 +427,12 @@ if (isset($_GET['msg'])) {
                 <!-- 반복문을 통해 개별 상점 정보를 테이블 행(row)으로 출력합니다. -->
                 <!-- XSS(크로스 사이트 스크립팅) 공격 방지를 위해 사용자 입력 데이터는 반드시 htmlspecialchars()로 감싸서 출력합니다. -->
                 <tr>
-                    <td class="t-center text-muted fw-bold">#<?= $s['id'] ?></td>
+                    <td class="t-center text-muted fw-bold">
+                        #<?= $s['id'] ?>
+                        <?php if (($s['is_sample_shop'] ?? 'n') === 'y'): ?>
+                            <div class="mt-1"><span class="badge bg-danger shadow-sm" style="font-size:0.65rem;">샘플</span></div>
+                        <?php endif; ?>
+                    </td>
 
                     <td>
                         <div class="fw-bold text-dark mb-1">

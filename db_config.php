@@ -5,24 +5,35 @@
  * 코드를 수정하거나 신규 작성할 때 반드시 자세한 코멘트를 함께 누적합니다.
  */
 
+// =================================================================
+// [인프라 상수] 테스트 및 서비스 환경의 DB 정보를 testers에서 쉽게 참조하도록 정의
+// =================================================================
+define('TEST_DB_NAME', 'u743828642_philshop24');
+define('TEST_DB_USER', 'u743828642_philshop24');
+define('TEST_DB_PASS', 'zlatmgK15%');
+
+define('LIVE_DB_NAME', 'u743828642_kshops24');
+define('LIVE_DB_USER', 'u743828642_kshops24_admin');
+define('LIVE_DB_PASS', 'zlatmgK15%');
+
 // [환경 분기] common_header.php에서 정의된 상수를 기반으로 DB 인프라 자동 분기
 if (defined('IS_TEST_ENV') && IS_TEST_ENV) {
     // =================================================================
     // [인프라 A] 서브도메인 테스트 서버 환경 DB 상수 (독립 샌드박스)
     // =================================================================
     define('DB_HOST', 'localhost');
-    define('DB_USER', 'u743828642_philshop24'); // 기존 유저 또는 테스트용 유저
-    define('DB_PASS', 'zlatmgK15%');              // 기존 암호 상수
-    define('DB_NAME', 'u743828642_philshop24');    // 🌟 테스트 전용 독립 디비로 격리!
+    define('DB_USER', TEST_DB_USER);
+    define('DB_PASS', TEST_DB_PASS);
+    define('DB_NAME', TEST_DB_NAME);
     define('DISPLAY_ERRORS', true);                // 개발 중 디버깅을 위해 에러 오픈
 } else {
     // =================================================================
     // [인프라 B] 정식 서비스 메인 운영 환경 DB 상수 (상용 라이브 데이터)
     // =================================================================
     define('DB_HOST', 'localhost');
-    define('DB_USER', 'u743828642_kshops24_admin'); // 새로 만든 정식 관리자 계정
-    define('DB_PASS', 'zlatmgK15%');                // 새 인증 보안 암호 상수
-    define('DB_NAME', 'u743828642_kshops24');      // 🌟 마이그레이션 완료된 진짜 상용 디비!
+    define('DB_USER', LIVE_DB_USER);
+    define('DB_PASS', LIVE_DB_PASS);
+    define('DB_NAME', LIVE_DB_NAME);
     define('DISPLAY_ERRORS', true);               // 고객 보안을 위해 에러 숨김
 }
 

@@ -58,7 +58,7 @@ $target_file = isset($test_files[$view]) ? '../' . $test_files[$view]['file'] : 
                     // 테스트 파일을 직접 실행하는 대신, iframe으로 감싸서 스타일 충돌을 방지하고 독립적인 환경을 제공합니다.
                     // 이렇게 하면 각 테스트 파일이 자체적인 HTML, CSS, JS를 가질 수 있습니다.
                     ?>
-                    <iframe src="<?= $target_file ?>" style="width: 100%; height: 80vh; border: none;"></iframe>
+                    <iframe src="<?= $target_file ?>" style="width: 100%; height: 180vh; border: none;"></iframe>
                 </div>
             </div>
         <?php else: ?>

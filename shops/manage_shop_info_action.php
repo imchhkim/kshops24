@@ -217,7 +217,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop'])) {
             if (!is_array($existing_ui)) $existing_ui = [];
             $ui_raw = $_POST['ui'];
             $ui_new = array_map('trim', $ui_raw);
-            $ui_new = array_filter($ui_new, fn($v) => $v !== '');
+            // [수정] PHP 7.4 미만 호환성을 위해 화살표 함수를 일반 익명 함수로 변경
+            $ui_new = array_filter($ui_new, function($v) { return $v !== ''; });
             $ui_merged = array_merge($existing_ui, $ui_new);
             $update_parts[] = "ui_settings = ?";
             $params[] = json_encode($ui_merged, JSON_UNESCAPED_UNICODE);
@@ -243,8 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop'])) {
         $stmt = $pdo->prepare("SELECT * FROM shops WHERE id = ?");
         $stmt->execute([$shop_id]);
         $shop = $stmt->fetch();
-    } catch (Exception $e) {
-        if (isset($_POST['ajax_update'])) {
+    } catch (Throwable $e) { // [수정] Exception 대신 Throwable 사용으로 모든 에러 포착
+        if (isset($_POST['ajax_update']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest')) {
             while (ob_get_level()) ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);

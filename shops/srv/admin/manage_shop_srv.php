@@ -607,6 +607,11 @@ if (isset($grouped_items['기타'])) {
         };
         const submitBtn = document.getElementById('modal-submit-btn');
         if (submitBtn) submitBtn.name = "add_item";
+
+        // 히든 액션 타입 동기화 (버튼 속성 누락 버그 완벽 방어)
+        const actionInput = document.getElementById('modal_action_type');
+        if (actionInput) actionInput.name = "add_item";
+
         setVal('item_id', "");
         setVal('old_img_path', "");
         setVal('trade_type', "방문 서비스"); // srv 기본값
@@ -668,6 +673,11 @@ if (isset($grouped_items['기타'])) {
 
         const submitBtn = document.getElementById('modal-submit-btn');
         if (submitBtn) submitBtn.name = "edit_item";
+
+        // 히든 액션 타입 동기화 (버튼 속성 누락 버그 완벽 방어)
+        const actionInput = document.getElementById('modal_action_type');
+        if (actionInput) actionInput.name = "edit_item";
+
         setVal('item_id', item.id || "");
         setVal('cat_id', item.cat_id || "");
         setVal('trade_type', item.trade_type || "방문 서비스");

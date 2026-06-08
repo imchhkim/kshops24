@@ -235,4 +235,8 @@ return [
     '이 상점에서의 경험은 어떠셨나요?' => 'How was your experience at this store?',
     '작성하신 리뷰를 정말 삭제하시겠습니까?' => 'Are you sure to delete your review?',
     '리뷰 수정' => 'Edit review',
+    '예약가능시간' => 'Reservation available times',
+    '서비스 비용 안내:' => 'Service Fee Information:',
+    '예약 시 안내' => 'Reservation Guide',
+    '서비스 방식:' => 'Service method:',
 ];

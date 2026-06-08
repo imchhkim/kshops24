@@ -12,8 +12,6 @@ if (!isset($shop_id)) exit; // 직접 접근 방지
 // [AJAX] 사진 갤러리 이미지 개별 삭제 처리
 // ---------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_gallery_img') {
-    while (ob_get_level()) ob_end_clean();
-    header('Content-Type: application/json');
     $img_id = (int)$_POST['img_id'];
     try {
         $stmt_old = $pdo->prepare("SELECT img_path FROM shop_images WHERE id = ? AND shop_id = ?");
@@ -24,8 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             deletePhysicalFiles($old_path);
             $pdo->prepare("DELETE FROM shop_images WHERE id = ? AND shop_id = ?")->execute([$img_id, $shop_id]);
         }
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json');
         echo json_encode(['status' => 'success']);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json');
         echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
     }
     exit;
@@ -34,42 +36,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // ---------------------------------------------------------
 // 홈페이지 설정값(POST) 저장 메인 로직
 // ---------------------------------------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop'])) {
+
+// AJAX 요청 여부 판별 (HTML 유출로 인한 JSON 파싱 에러 방지)
+// [보완] 필수 파라미터가 포함된 비동기 요청을 모두 AJAX로 간주하여 HTML 유출(JSON 파싱 에러)을 원천 차단합니다.
+$is_ajax_request = (
+    (isset($_POST['ajax_update']) && $_POST['ajax_update'] == '1') || 
+    (isset($_GET['ajax_update']) && $_GET['ajax_update'] == '1') ||
+    (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') ||
+    !empty($_POST['gallery_order']) ||
+    !empty($_POST['bg_path']) ||
+    isset($_POST['action']) ||
+    isset($_POST['update_shop_status'])
+);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['update_shop']) || $is_ajax_request)) {
+    // 출력 버퍼링 시작: 혹시 모를 PHP 경고(Warning)가 JSON 응답을 깨뜨리지 않도록 보호
+    if (ob_get_level() == 0) ob_start();
+
     try {
-        // 1. 다중 배경 이미지(bg_path) 물리 파일 삭제 감지 및 처리
+        // 0. 상점 정보 로드
+        $stmt_shop = $pdo->prepare("SELECT * FROM shops WHERE id = ?");
+        $stmt_shop->execute([$shop_id]);
+        $shop = $stmt_shop->fetch(PDO::FETCH_ASSOC);
+        if (!$shop) throw new Exception("상점 정보를 찾을 수 없습니다.");
+
+        // [안전 장치] JSON 데이터 해석 실패 시 데이터 유실을 막기 위한 내부 헬퍼 함수
+        $safeDecode = function($input) {
+            if (empty($input) || $input === '[]' || $input === 'null' || $input === 'undefined') return [];
+            if (is_array($input)) return $input;
+
+            $res = is_string($input) ? json_decode($input, true) : $input;
+            if (json_last_error() !== JSON_ERROR_NONE && is_string($input)) {
+                $res = json_decode(htmlspecialchars_decode($input, ENT_QUOTES), true);
+            }
+            return is_array($res) ? $res : null;
+        };
+
+        // 1. 다중 배경 이미지 처리
         if (isset($_POST['bg_path'])) {
-            $new_decoded = json_decode($_POST['bg_path'], true);
-            if (is_string($new_decoded) && strpos(trim($new_decoded), '[') === 0) $new_decoded = json_decode($new_decoded, true);
-            $new_bg_paths = is_array($new_decoded) ? $new_decoded : [$_POST['bg_path']];
-
-            $old_bg_paths = [];
-            if (!empty($shop['bg_path'])) {
-                $decoded = json_decode($shop['bg_path'], true);
-                if (is_string($decoded) && strpos(trim($decoded), '[') === 0) $decoded = json_decode($decoded, true);
-                $old_bg_paths = is_array($decoded) ? $decoded : [$shop['bg_path']];
-            }
-
-            $deleted_bgs = [];
-            foreach ($old_bg_paths as $p) {
-                if (is_string($p) && !empty($p) && !in_array($p, $new_bg_paths)) {
-                    $deleted_bgs[] = $p;
+            $new_bg_paths = $safeDecode($_POST['bg_path']);
+            if ($new_bg_paths !== null) {
+                $old_bg_paths = json_decode($shop['bg_path'] ?? '[]', true) ?: [];
+                $_POST['bg_path'] = json_encode($new_bg_paths, JSON_UNESCAPED_UNICODE);
+                $deleted_bgs = [];
+                foreach ($old_bg_paths as $p) {
+                    if (!empty($p) && !in_array($p, $new_bg_paths)) {
+                        $deleted_bgs[] = $p;
+                    }
                 }
+                if (!empty($deleted_bgs)) deletePhysicalFiles($deleted_bgs);
+            } else {
+                unset($_POST['bg_path']);
             }
-            if (!empty($deleted_bgs)) deletePhysicalFiles($deleted_bgs);
         }
 
-        // 2. 여러 개의 유튜브 링크를 배열로 받아 빈 값을 제거하고 JSON 변환
-        if (isset($_POST['shop_youtube_url']) && is_array($_POST['shop_youtube_url'])) {
-            $youtube_urls = [];
-            foreach ($_POST['shop_youtube_url'] as $url) {
-                if (trim($url) !== '') {
-                    $youtube_urls[] = trim($url);
-                }
+         // 2. 유튜브 링크 배열 처리
+        if (isset($_POST['shop_youtube_url'])) {
+            if (is_array($_POST['shop_youtube_url'])) {
+                $yt_urls = array_map(function($v) { return is_string($v) ? trim($v) : ''; }, $_POST['shop_youtube_url']);
+                $_POST['shop_youtube_url'] = json_encode(array_values(array_filter($yt_urls)), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            } else {
+                $_POST['shop_youtube_url'] = is_string($_POST['shop_youtube_url']) ? trim($_POST['shop_youtube_url']) : '[]';
             }
-            $_POST['shop_youtube_url'] = json_encode($youtube_urls, JSON_UNESCAPED_SLASHES);
         }
 
-        // 3. 홈페이지 전용 업데이트 필드 구성
+         // 3. 업데이트 필드 구성
         $updatable_fields = [
             'top_label', 'main_title', 'sub_title', 'shop_intro', 'shop_description',
             'shop_map_html', 'shop_skin', 'shop_font', 'shop_youtube_url',
@@ -90,13 +121,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop'])) {
             }
         }
 
-        // 4. UI 레이블 설정 처리 (JSON 병합)
-        if (isset($_POST['ui'])) {
+        // 4. UI 레이블(섹션 제목) 병합 저장
+        if (isset($_POST['ui']) && is_array($_POST['ui'])) {
             $existing_ui = json_decode($shop['ui_settings'] ?? '{}', true);
             if (!is_array($existing_ui)) $existing_ui = [];
-            $ui_raw = $_POST['ui'];
-            $ui_new = array_map('trim', $ui_raw);
-            $ui_new = array_filter($ui_new, fn($v) => $v !== '');
+            
+            $ui_new = array_map(function($v) { return is_string($v) ? trim($v) : $v; }, $_POST['ui']);
             $ui_merged = array_merge($existing_ui, $ui_new);
             $update_parts[] = "ui_settings = ?";
             $params[] = json_encode($ui_merged, JSON_UNESCAPED_UNICODE);
@@ -109,43 +139,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop'])) {
             $pdo->prepare($sql)->execute($params);
         }
 
-        // 5. 갤러리 이미지 정렬 순서 업데이트 (드래그앤드롭 반영)
-        if (isset($_POST['gallery_order'])) {
-            $gallery_order = json_decode($_POST['gallery_order'], true);
-            if (is_array($gallery_order)) {
-                $stmt_update_order = $pdo->prepare("UPDATE shop_images SET sort_order = ? WHERE shop_id = ? AND img_path = ?");
+        // 5. 갤러리 이미지 순서 업데이트
+        if (!empty($_POST['gallery_order'])) {
+            $gallery_order = $safeDecode($_POST['gallery_order']);
+            if (is_array($gallery_order) && !empty($gallery_order)) {
+                $pdo->prepare("UPDATE shop_images SET sort_order = 0 WHERE shop_id = ?")->execute([$shop_id]);
+                $stmt_update_order = $pdo->prepare("UPDATE shop_images SET sort_order = ? WHERE shop_id = ? AND (img_path = ? OR img_path LIKE ?)");
                 foreach ($gallery_order as $index => $path) {
-                    $stmt_update_order->execute([$index + 1, $shop_id, $path]);
+                    if (!is_string($path)) continue;
+                    $stmt_update_order->execute([$index + 1, $shop_id, $path, "%" . addslashes(basename((string)$path))]);
                 }
             }
         }
 
-        if (isset($_POST['ajax_update'])) {
-            while (ob_get_level()) ob_end_clean();
+        if ($is_ajax_request) {
+            // JSON 출력 전 버퍼의 모든 찌꺼기 비우기
+            while (ob_get_level() > 0) ob_end_clean(); 
             header('Content-Type: application/json');
             echo json_encode(['status' => 'success', 'message' => '홈페이지 설정이 성공적으로 저장되었습니다.']);
-            exit;
+            exit; 
         }
+
+        // 일반 폼 전송 시 화면에 최신 데이터가 바로 나오도록 다시 조회
+        $stmt = $pdo->prepare("SELECT * FROM shops WHERE id = ?");
+        $stmt->execute([$shop_id]);
+        $shop = $stmt->fetch();
 
         $message = "홈페이지 설정이 성공적으로 저장되었습니다.";
         $msg_type = "success";
 
-        // 업데이트가 끝나면 현재 페이지에 최신 상태를 반영하기 위해 다시 조회
-        $stmt = $pdo->prepare("SELECT * FROM shops WHERE id = ?");
-        $stmt->execute([$shop_id]);
-        $shop = $stmt->fetch();
-    } catch (Exception $e) {
-        if (isset($_POST['ajax_update'])) {
-            while (ob_get_level()) ob_end_clean();
+    } catch (Throwable $e) {
+        if ($is_ajax_request) {
+            while (ob_get_level() > 0) ob_end_clean();
             header('Content-Type: application/json');
             echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
             exit;
         }
+
+        // 페이지 렌더링용 정보 조회
+        $stmt = $pdo->prepare("SELECT * FROM shops WHERE id = ?");
+        $stmt->execute([$shop_id]);
+        $shop = $stmt->fetch();
+
         $message = $e->getMessage();
         $msg_type = "danger";
     }
+} elseif ($is_ajax_request) {
+    while (ob_get_level() > 0) ob_end_clean();
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'error', 'message' => '잘못된 요청 방식이거나 권한이 없습니다.']);
+    exit;
 }
-
 // ---------------------------------------------------------
 // 갤러리 데이터 준비 및 언어 변수 세팅
 // ---------------------------------------------------------
@@ -185,6 +229,8 @@ if ($lang2 === 'etc') {
 <div class="col-12 mb-4">
     <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-danger">
         <form method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="handleAjaxFormSubmit(event)">
+            <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+            <input type="hidden" name="pg" value="manage_shop_homepage">
             <input type="hidden" name="update_shop" value="1">
             <?php echo renderSectionHeader('상점 공지사항 관리', 'bi-megaphone text-danger'); ?>
             <div class="mb-3">
@@ -209,6 +255,8 @@ if ($lang2 === 'etc') {
     <div class="col-lg-6">
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-primary">
             <form method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="handleAjaxFormSubmit(event)">
+                <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                <input type="hidden" name="pg" value="manage_shop_homepage">
                 <input type="hidden" name="update_shop" value="1">
                 <?php echo renderSectionHeader('상점 디자인 테마 설정', 'bi-magic'); ?>
                 <div class="row g-4 mt-1">
@@ -334,6 +382,8 @@ if ($lang2 === 'etc') {
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-primary" id="section-resource">
             <div class="p-3 p-md-4 d-flex flex-column h-100">
                 <form class="mb-4" method="POST" onsubmit="handleAjaxFormSubmit(event)">
+                    <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                    <input type="hidden" name="pg" value="manage_shop_homepage">
                     <input type="hidden" name="update_shop" value="1">
                     <?php echo renderSectionHeader('이미지 리소스 관리', 'bi-image'); ?>
                     <div class="mb-4 text-left">
@@ -354,7 +404,7 @@ if ($lang2 === 'etc') {
                     <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light rounded border">
                         <div>
                             <h6 class="fw-bold mb-1 text-dark small">상점 이름(한글) 함께 노출</h6>
-                            <p class="text-muted small mb-0" style="font-size: 0.7rem;">홈페이지 상단 로고 오른쪽에 상점명(한글)을 표시합니다.</p>
+                            <p class="text-muted small mb-0" style="font-size: 0.7rem;">홈페이지 상단 로고 오른쪽에 상점명(한글)을 표시합니다. 수정하면 바로 홈페이지에 적용됩니다.</p>
                         </div>
                         <div class="form-check form-switch m-0 fs-5">
                             <input type="hidden" name="ui[is_show_logo_text]" value="0">
@@ -363,8 +413,13 @@ if ($lang2 === 'etc') {
                     </div>
                 </form>
                 <hr class="my-4">
+                <!-- 2. 메인 배경 이미지 관리 -->
                 <form id="bg-form" class="flex-grow-1 d-flex flex-column" onsubmit="saveImageBatch(event, 'background')">
+                    <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                    <input type="hidden" name="pg" value="manage_shop_homepage">
                     <input type="hidden" name="update_shop" value="1">
+                    <!-- [추가] AJAX 요청 시 JSON 응답을 강제하기 위한 플래그 -->
+                    <input type="hidden" name="ajax_update" value="1">
                     <input type="hidden" name="bg_path" id="bg_path_input" value='<?php echo htmlspecialchars($shop['bg_path'] ?? '[]', ENT_QUOTES); ?>'>
                     <div class="mb-0 flex-grow-1 d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -394,7 +449,7 @@ if ($lang2 === 'etc') {
                         </div>
                         <input type="file" id="bg-file-multi" class="d-none" accept="image/*" multiple onchange="addBatchImage('background', this)">
                         <div class="mt-auto text-end pt-3 border-top mt-3">
-                            <button type="submit" class="btn btn-dark btn-sm rounded-pill px-4 shadow-sm"><i class="bi bi-check2-circle me-1"></i> 배경 이미지 저장</button>
+                            <button type="submit" class="btn btn-dark btn-sm rounded-pill px-4 shadow-sm"><i class="bi bi-check2-circle me-1"></i> 메인 배경 이미지 저장</button>
                         </div>
                     </div>
                 </form>
@@ -408,6 +463,8 @@ if ($lang2 === 'etc') {
     <div class="col-lg-6">
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-primary">
             <form method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="handleAjaxFormSubmit(event)">
+                <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                <input type="hidden" name="pg" value="manage_shop_homepage">
                 <input type="hidden" name="update_shop" value="1">
                 <?php echo renderSectionHeader('메인 홍보 문구 관리', 'bi-layout-text-window-reverse'); ?>
                 <div class="form-check form-switch mb-3">
@@ -533,6 +590,8 @@ if ($lang2 === 'etc') {
     <div class="col-lg-6">
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-primary">
             <form id="story-form" method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="syncQuillEditor(); handleAjaxFormSubmit(event)">
+                <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                <input type="hidden" name="pg" value="manage_shop_homepage">
                 <input type="hidden" name="update_shop" value="1">
                 <?php echo renderSectionHeader('상점 소개 상세 관리', 'bi-pencil-square'); ?>
                 <div class="form-check form-switch mb-1"><input type="hidden" name="is_show_story" value="0"><input class="form-check-input" type="checkbox" name="is_show_story" id="is_show_story" value="1" <?php echo (($shop['is_show_story'] ?? 1) == 1) ? 'checked' : ''; ?>><label class="form-check-label small fw-bold text-primary" for="is_show_story">홈페이지 노출</label></div>
@@ -594,10 +653,13 @@ if ($lang2 === 'etc') {
 <div class="row g-4 mb-4">
     <div class="col-lg-6">
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-info" id="section-gallery">
-            <form id="gallery-form" method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="saveImageBatch(event, 'gallery')">
-                <?php echo renderSectionHeader('매장 사진 관리 (갤러리)', 'bi-images'); ?>
+            <div class="p-3 p-md-4 d-flex flex-column h-100">
+                <!-- 폼 1: 섹션 기본 설정 (노출 여부 및 다국어 제목) -->
+                <form id="gallery-settings-form" method="POST" class="mb-4" onsubmit="handleAjaxFormSubmit(event)">
+                <input type="hidden" name="pg" value="manage_shop_homepage">
+                <input type="hidden" name="update_shop" value="1">
+                <?php echo renderSectionHeader('매장 사진 관리 (갤러리)', 'bi-gear'); ?>
                 <div class="form-check form-switch mb-4"><input type="hidden" name="is_show_gallery" value="0"><input class="form-check-input" type="checkbox" name="is_show_gallery" id="is_show_gallery" value="1" <?php echo (($shop['is_show_gallery'] ?? 1) == 1) ? 'checked' : ''; ?>><label class="form-check-label small fw-bold text-primary" for="is_show_gallery">홈페이지 노출</label></div>
-                <input type="hidden" name="gallery_order" id="gallery_order_input" value="[]">
 
                 <?php if ($is_multi && ($lang1 !== 'none' || $lang2 !== 'none')): ?>
                     <ul class="nav nav-tabs mb-3" id="gallery-tab" role="tablist">
@@ -609,7 +671,7 @@ if ($lang2 === 'etc') {
 
                 <div class="tab-content mb-3" id="gallery-tabContent">
                     <div class="tab-pane fade show active" id="gallery-ko-pane" role="tabpanel">
-                        <label class="form-label small fw-bold text-muted">섹션 제목 (레이블)</label><input type="text" name="ui[label_gallery]" class="form-control form-control-sm" value="<?php echo htmlspecialchars($ui['label_gallery'] ?? SHOP_DEFAULT_LABEL_GALLERY); ?>">
+                        <label class="form-label small fw-bold text-muted">섹션 제목 (한국어)</label><input type="text" name="ui[label_gallery]" class="form-control form-control-sm" value="<?php echo htmlspecialchars($ui['label_gallery'] ?? SHOP_DEFAULT_LABEL_GALLERY); ?>">
                     </div>
                     <?php if ($is_multi && $lang1 !== 'none'): ?>
                         <div class="tab-pane fade" id="gallery-lang1-pane" role="tabpanel">
@@ -618,62 +680,75 @@ if ($lang2 === 'etc') {
                     <?php endif; ?>
                     <?php if ($is_multi && $lang2 !== 'none'): ?>
                         <div class="tab-pane fade" id="gallery-lang2-pane" role="tabpanel">
-                            <label class="form-label small fw-bold text-muted">섹션 제목 (<?php echo htmlspecialchars($lang2_display); ?>)</label><input type="text" name="ui[label_gallery_<?php echo $lang2_code; ?>]" class="form-control form-control-sm" value="<?php echo htmlspecialchars($ui['label_gallery_' . $lang2_code] ?? ''); ?>">
-                        </div>
+                        <label class="form-label small fw-bold text-muted">섹션 제목 (<?php echo htmlspecialchars($lang2_display); ?>)</label><input type="text" name="ui[label_gallery_<?php echo $lang2_code; ?>]" class="form-control form-control-sm" value="<?php echo htmlspecialchars($ui['label_gallery_' . $lang2_code] ?? ''); ?>">
+                    </div>
                     <?php endif; ?>
                 </div>
-
-                <div class="mb-9 flex-grow-1 d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label mb-0 small fw-bold text-muted">갤러리 사진 관리</label>
-                        <button type="button" onclick="document.getElementById('gallery-file').click()" class="btn btn-outline-primary btn-sm rounded-pill py-1 px-3 fw-bold shadow-sm" style="font-size: 0.75rem;"><i class="bi bi-plus-lg me-1"></i>사진 추가</button>
-                    </div>
-                    <p <?php echo UI_INFO_SM_LABEL;?>> 이미지를 드래그하여 순서를 바꿀 수 있습니다. 수정 후에는 꼭 "사진 설정 저장" 버튼을 눌러주세요.</p>
-                    <div class="row g-2 p-3 border rounded shadow-inner row-cols-2 row-cols-md-3 mt-2" id="shop-gallery-container" style="min-height: 90px; background: #f8f9fa;">
-                        <?php if (!empty($shop_imgs)): foreach ($shop_imgs as $img): ?>
-                                <div class="col gallery-item" id="gallery-item-<?php echo $img['id']; ?>" data-path="<?php echo htmlspecialchars($img['img_path'], ENT_QUOTES); ?>" style="cursor: grab;">
-                                    <div class="position-relative">
-                                        <img src="<?php echo htmlspecialchars($img['img_path']); ?>" class="w-100 rounded border shadow-sm" style="aspect-ratio: 1/1; object-fit: cover;">
-                                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 rounded-circle" style="width:20px; height:20px; margin: 4px;" onclick="event.stopPropagation(); deleteBatchImage('gallery', <?php echo $img['id']; ?>)">
-                                            <i class="bi bi-x" style="font-size: 0.8rem; vertical-align: top;"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                        <?php endforeach; endif; ?>
-                        <div class="empty-msg text-muted small w-100 text-center my-auto <?php echo empty($shop_imgs) ? '' : 'd-none'; ?>">등록된 사진이 없습니다.</div>
-                        <button type="button" class="btn-add-img d-none"></button>
-                    </div>
-                    <input type="file" id="gallery-file" class="d-none" accept="image/*" multiple onchange="addBatchImage('gallery', this)">
-                    <div id="gallery-upload-spinner" class="d-none small text-primary mt-2 text-center"><span class="spinner-border spinner-border-sm me-1"></span>업로드 중...</div>
+                <div class="text-end">
+                    <button type="submit" name="update_shop" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold"><i class="bi bi-check2-circle me-1"></i> 섹션 설정 저장</button>
                 </div>
-                <div class="mt-3 mb-0">
-                    <label class="form-label small fw-bold text-muted mb-3"><i class="bi bi-youtube text-danger me-1"></i> 매장 홍보 유튜브 동영상 링크</label>
-                    <p <?php echo UI_INFO_SM_LABEL;?>> 매장을 홍보할 수 있는 유튜브 영상 링크를 여러 개 추가할 수 있습니다.</p>
-                    <div id="youtube-links-container" class="mt-1 mb-0">
-                        <?php
-                        $yt_urls = [];
-                        if (!empty($shop['shop_youtube_url'])) {
-                            $decoded = json_decode($shop['shop_youtube_url'], true);
-                            $yt_urls = is_array($decoded) ? $decoded : [$shop['shop_youtube_url']];
-                        }
-                        if (empty($yt_urls)) $yt_urls = [''];
-                        foreach ($yt_urls as $url):
-                        ?>
+                </form>
+
+                <hr class="my-4">
+
+                <!-- [분할] 폼 2: 사진 정렬 및 유튜브 링크 (이미지 배치 처리 전용) -->
+                <form id="gallery-batch-form" class="flex-grow-1 d-flex flex-column" onsubmit="saveImageBatch(event, 'gallery')">
+                    <input type="hidden" name="pg" value="manage_shop_homepage">
+                    <input type="hidden" name="update_shop" value="1">
+                    <input type="hidden" name="ajax_update" value="1">
+                    <input type="hidden" name="gallery_order" id="gallery_order_input" value="[]">
+                    
+                    <?php echo renderSectionHeader('갤러리 사진 및 유튜브 관리', 'bi-images'); ?>
+
+                    <div class="mb-4 flex-grow-1 d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0 small fw-bold text-muted">1. 사진 관리</label>
+                            <button type="button" onclick="document.getElementById('gallery-file').click()" class="btn btn-outline-primary btn-sm rounded-pill py-1 px-3 fw-bold shadow-sm" style="font-size: 0.75rem;"><i class="bi bi-plus-lg me-1"></i>사진 추가</button>
+                        </div>
+                        <p <?php echo UI_INFO_SM_LABEL;?>> 이미지를 드래그하여 순서를 바꿀 수 있습니다. 수정 후에는 반드시 저장 버튼을 눌러주세요.</p>
+                        <div class="row g-2 p-3 border rounded shadow-inner row-cols-2 row-cols-md-3 mt-2" id="shop-gallery-container" style="min-height: 90px; background: #f8f9fa;">
+                            <?php if (!empty($shop_imgs)): foreach ($shop_imgs as $img): ?>
+                                    <div class="col gallery-item" id="gallery-item-<?php echo $img['id']; ?>" data-path="<?php echo htmlspecialchars($img['img_path'], ENT_QUOTES); ?>" style="cursor: grab;">
+                                        <div class="position-relative">
+                                            <img src="<?php echo htmlspecialchars($img['img_path']); ?>" class="w-100 rounded border shadow-sm" style="aspect-ratio: 1/1; object-fit: cover;">
+                                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 rounded-circle" style="width:20px; height:20px; margin: 4px;" onclick="event.stopPropagation(); deleteBatchImage('gallery', <?php echo $img['id']; ?>)">
+                                                <i class="bi bi-x" style="font-size: 0.8rem; vertical-align: top;"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                            <?php endforeach; endif; ?>
+                            <div class="empty-msg text-muted small w-100 text-center my-auto <?php echo empty($shop_imgs) ? '' : 'd-none'; ?>">등록된 사진이 없습니다.</div>
+                        </div>
+                        <input type="file" id="gallery-file" class="d-none" accept="image/*" multiple onchange="addBatchImage('gallery', this)">
+                    </div>
+                    <div class="mt-3 mb-0">
+                        <label class="form-label small fw-bold text-muted mb-2">2. 홍보 유튜브 링크</label>
+                        <div id="youtube-links-container" class="mt-1 mb-0">
+                            <?php
+                            $yt_urls = [];
+                            if (!empty($shop['shop_youtube_url'])) {
+                                $decoded = json_decode($shop['shop_youtube_url'], true);
+                                $yt_urls = is_array($decoded) ? $decoded : [$shop['shop_youtube_url']];
+                            }
+                            if (empty($yt_urls)) $yt_urls = [''];
+                            foreach ($yt_urls as $url):
+                            ?>
                             <div class="input-group input-group-sm mb-2 yt-input-group">
                                 <span class="input-group-text"><i class="bi bi-youtube text-danger"></i></span>
                                 <input type="url" name="shop_youtube_url[]" class="form-control form-control-sm" placeholder="https://www.youtube.com/watch?v=..." value="<?php echo htmlspecialchars($url); ?>">
                                 <button class="btn btn-outline-danger fw-bold" type="button" onclick="removeYoutubeInput(this)"><i class="bi bi-trash3"></i> 삭제</button>
                             </div>
-                        <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1 fw-bold rounded-pill px-3 mb-3" onclick="addYoutubeInput()" style="font-size: 0.75rem;"><i class="bi bi-plus-lg me-1"></i> 링크 추가</button>
+                        </div>
                     </div>
-                    <div class="text-end">
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-1 fw-bold rounded-pill px-3 mb-3" onclick="addYoutubeInput()" style="font-size: 0.75rem;"><i class="bi bi-plus-lg me-1"></i> 동영상 링크 추가</button>
+                    <div class="mt-auto text-end pt-3 border-top">
+                        <button type="submit" class="btn btn-dark btn-sm rounded-pill px-4 shadow-sm fw-bold"><i class="bi bi-check2-circle me-1"></i> 사진 및 유튜브 저장</button>
                     </div>
-                </div>
-                <div class="mt-auto text-end pt-3 border-top">
-                    <button type="submit" name="update_shop" class="btn btn-dark btn-sm rounded-pill px-4 shadow-sm"><i class="bi bi-check2-circle me-1"></i> 사진 설정 저장</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -681,6 +756,8 @@ if ($lang2 === 'etc') {
     <div class="col-lg-6">
         <div class="<?php echo UI_SECTION_CARD; ?> border-start border-4 border-secondary">
             <form method="POST" class="p-3 p-md-4 d-flex flex-column h-100" onsubmit="handleAjaxFormSubmit(event)">
+                <!-- [추가] 라우팅을 위한 pg 파라미터 명시 -->
+                <input type="hidden" name="pg" value="manage_shop_homepage">
                 <input type="hidden" name="update_shop" value="1">
                 <?php echo renderSectionHeader('위치 정보 (구글 지도)', 'bi-geo-alt text-muted', [], '<i class="bi bi-question-circle text-muted fs-5" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#googleMapHelpModal"></i>'); ?>
                 <div class="form-check form-switch mb-3">
@@ -918,7 +995,7 @@ if ($lang2 === 'etc') {
         div.className = 'input-group input-group-sm mb-2 yt-input-group';
         div.innerHTML = `
             <span class="input-group-text"><i class="bi bi-youtube text-danger"></i></span>
-            <input type="url" name="shop_youtube_url[]" class="form-control form-control-sm" placeholder="https://www.youtube.com/watch?v=...">
+            <input type="url" name="shop_youtube_url[]" class="form-control form-control-sm" placeholder="일반 유튜브 또는 쇼츠(shorts/...) 주소">
             <button class="btn btn-outline-danger fw-bold" type="button" onclick="removeYoutubeInput(this)"><i class="bi bi-trash3"></i> 삭제</button>
         `;
         container.appendChild(div);
