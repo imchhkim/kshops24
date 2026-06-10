@@ -110,22 +110,32 @@ $ui = json_decode($shop['ui_settings'] ?? '{}', true);
                     <dt class="col-5 text-muted mb-2">상점 실제 주소</dt>
                     <dd class="col-7 mb-2"><?php echo htmlspecialchars($shop['physical_address'] ?? '-'); ?></dd>
                     
-                    <dt class="col-5 text-muted mb-2">화폐 및 다국어</dt>
+                    <dt class="col-5 text-muted mb-2">나라(화폐) 및 다국어</dt>
                     <dd class="col-7 mb-2">
-                        <div class="mb-1">화폐: <strong><?php echo htmlspecialchars($ui['currency'] ?? 'PHP'); ?></strong></div>
+                        <?php
+                        $current_country = $ui['country'] ?? 'PH';
+                        ?>
+                        <div class="mb-1">기준: <strong><?php echo htmlspecialchars(function_exists('getCountryDisplayLabel') ? getCountryDisplayLabel($current_country) : '필리핀 (PHP, ₱ / +63)'); ?></strong></div>
                         <div>다국어: 
                             <?php 
                             if (($ui['is_multilingual'] ?? 0) == 1) {
                                 $supported_langs = [
                                     'en' => '영어', 'tl' => '따갈로그어', 'zh' => '중국어', 'ja' => '일본어',
                                     'vi' => '베트남어', 'th' => '태국어', 'id' => '인도네시아어', 'ms' => '말레이시아어',
-                                    'es' => '스페인어', 'fr' => '프랑스어', 'de' => '독일어', 'ru' => '러시아어'
+                                    'km' => '크메르어', 'my' => '미얀마어', 'hi' => '힌디어',
+                                    'es' => '스페인어', 'fr' => '프랑스어', 'de' => '독일어', 'it' => '이탈리아어',
+                                    'nl' => '네덜란드어', 'ru' => '러시아어', 'ar' => '아랍어', 'pt' => '포르투갈어'
                                 ];
                                 $langs = ['한국어'];
                                 $lang1 = $ui['multilingual_lang1'] ?? 'none';
                                 $lang2 = $ui['multilingual_lang2'] ?? 'none';
-                                if ($lang1 !== 'none') $langs[] = $supported_langs[$lang1] ?? strtoupper($lang1);
-                                if ($lang2 !== 'none') $langs[] = $supported_langs[$lang2] ?? strtoupper($lang2);
+                                
+                                if ($lang1 !== 'none') {
+                                    $langs[] = ($lang1 === 'etc') ? ($ui['multilingual_lang1_custom_name'] ?? '직접입력') : ($supported_langs[$lang1] ?? strtoupper($lang1));
+                                }
+                                if ($lang2 !== 'none') {
+                                    $langs[] = ($lang2 === 'etc') ? ($ui['multilingual_lang2_custom_name'] ?? '직접입력') : ($supported_langs[$lang2] ?? strtoupper($lang2));
+                                }
                                 echo '<span class="text-danger fw-bold">ON (' . implode(', ', $langs) . ')</span>';
                             } else {
                                 echo '<span class="text-muted">OFF</span>';

@@ -65,6 +65,9 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
     &copy; <?php echo date('Y'); ?> <a href="https://kshops24.com/" class="text-muted" target="_blank">KShops24</a> All rights reserved.
 </footer>
 
+<!-- [추가] 글로벌 전화번호 자동 포맷팅 라이브러리 (libphonenumber-js) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/libphonenumber-js/1.10.44/libphonenumber-js.min.js"></script>
+
 <script>
     /**
      * [공통 UI] 시스템 알림 토스트 표시 함수
@@ -205,29 +208,26 @@ $quick_nav_shadow = IS_TEST_ENV ? 'rgba(239, 68, 68, 0.4)' : 'rgba(0, 74, 173, 0
     }
 
     /**
-     * 필리핀 전화번호 실시간 포맷팅 (공통)
-     * - Mobile: 0917-123-4567
-     * - Landline (Manila): 02-8123-4567
-     * - Landline (Province): 043-123-4567
+     * [개선] 구글 libphonenumber-js 기반 글로벌 자동 전화번호 포맷팅 (공통)
      */
     function formatPhoneInput(input) {
-        let val = input.value.replace(/\D/g, ''); // 숫자만 남기기
-        let result = '';
-
-        if (val.startsWith('02')) { // 마닐라 유선
-            if (val.length <= 2) result = val;
-            else if (val.length <= 6) result = val.slice(0, 2) + '-' + val.slice(2);
-            else result = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
-        } else if (val.startsWith('09')) { // 모바일
-            if (val.length <= 4) result = val;
-            else if (val.length <= 7) result = val.slice(0, 4) + '-' + val.slice(4);
-            else result = val.slice(0, 4) + '-' + val.slice(4, 7) + '-' + val.slice(7, 11);
-        } else { // 지방 유선
-            if (val.length <= 3) result = val;
-            else if (val.length <= 6) result = val.slice(0, 3) + '-' + val.slice(3);
-            else result = val.slice(0, 3) + '-' + val.slice(3, 6) + '-' + val.slice(6, 10);
+        // 상점 환경 설정에서 국가 코드를 가져옴 (없으면 기본값 PH)
+        let countryCode = 'PH';
+        if (typeof FNB_CONFIG !== 'undefined' && FNB_CONFIG.country) countryCode = FNB_CONFIG.country;
+        else if (typeof PS24_SHOP_CONFIG !== 'undefined' && PS24_SHOP_CONFIG.country) countryCode = PS24_SHOP_CONFIG.country;
+        else if (typeof getShopConfig === 'function') {
+            const cfg = getShopConfig();
+            if (cfg && cfg.country) countryCode = cfg.country;
         }
-        input.value = result;
+
+        if (typeof libphonenumber !== 'undefined') {
+            // 사용자가 타이핑하는 동안(As You Type) 상점 국가 설정에 맞춰 자동 변환
+            const formatter = new libphonenumber.AsYouType(countryCode);
+            input.value = formatter.input(input.value);
+        } else {
+            // 라이브러리 로드 실패 시 숫자와 특수문자(+) 만 남기는 폴백
+            input.value = input.value.replace(/[^\d+]/g, '');
+        }
     }
 
     /**

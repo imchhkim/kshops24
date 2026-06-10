@@ -74,7 +74,7 @@
                             <input type="hidden" id="single_inquiry_item_data" value="">
                             <div class="mb-3">
                                 <label class="form-label small fw-bold text-dark"><i class="bi bi-telephone me-1"></i> <?php echo __('연락 가능한 핸드폰 번호 *'); ?></label>
-                                <input type="tel" id="single_customer_phone" class="form-control" placeholder="<?php echo htmlspecialchars(__('09XX-XXX-XXXX')); ?>" oninput="formatPhoneInput(this)" maxlength="13" required>
+                                <input type="tel" id="single_customer_phone" class="form-control" placeholder="<?php echo htmlspecialchars(__('+63 917 123 4567')); ?>" oninput="formatPhoneInput(this)" maxlength="20" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-bold text-dark"><i class="bi bi-chat-text me-1"></i> <?php echo __('상세 문의/요청 사항 *'); ?></label>
@@ -130,7 +130,7 @@
                 <form id="orderForm">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-telephone me-1"></i> <?php echo __('연락 가능한 핸드폰 번호 *'); ?></label>
-                        <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="<?php echo htmlspecialchars(__('09XX-XXX-XXXX')); ?>" oninput="formatPhoneInput(this)" maxlength="13" required>
+                        <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="<?php echo htmlspecialchars(__('+63 917 123 4567')); ?>" oninput="formatPhoneInput(this)" maxlength="20" required>
                     </div>
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-chat-text me-1"></i> <?php echo __('상세 문의/요청 사항 *'); ?></label>

@@ -750,6 +750,12 @@ $fnb_js_ver = file_exists($_SERVER['DOCUMENT_ROOT'] . $fnb_js_path) ? filemtime(
             </a>
 
             <div class="ms-auto d-flex align-items-center">
+                <!-- 상점 기준 국가 표시 -->
+                <?php $shop_country_code = strtolower($ui['country'] ?? 'PH'); ?>
+                <span class="badge bg-light text-secondary border me-2 px-2 py-1" style="font-size: 0.75rem;">
+                    <i class="bi bi-geo-alt-fill text-primary"></i> <?php echo $shop_country_code; ?>
+                </span>
+
                 <!-- 언어 선택 드롭다운 -->
                 <?php if (($ui['is_multilingual'] ?? 0) == 1): ?>
                     <?php

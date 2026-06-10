@@ -25,6 +25,7 @@ $allowed_pages = [
     'manage_shops'       => 'manage_shops.php',
     'manage_expiring_shops' => 'manage_expiring_shops.php',
     'manage_shop' => 'manage_shop.php', // 개별 상점 상세 관리 페이지 추가
+    'manage_customers'   => 'manage_customers.php', // 통합 고객 관리 페이지 추가
     'manage_site'        => 'manage_site.php',
     'manage_testers'      => 'manage_testers.php',
     'manage_telegram'    => 'manage_telegram.php'
@@ -43,6 +44,8 @@ if ($page === 'manage_site') {
     $page_title = '<i class="bi bi-clock-history me-2"></i> 만료 임박 상점';
 } elseif ($page === 'manage_shops') {
     $page_title = '<i class="bi bi-shop me-2"></i> 상점 상태 관리';
+} elseif ($page === 'manage_customers') {
+    $page_title = '<i class="bi bi-people me-2"></i> 고객 관리';
 } elseif ($page === 'manage_testers') {
     $page_title = '<i class="bi bi-bug me-2"></i>테스터 관리';
 } elseif ($page === 'manage_telegram') {
@@ -242,6 +245,12 @@ if ($page === 'manage_site') {
                             <i class="bi bi-shop me-1"></i> 개별 상점 관리
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link-custom <?php echo ($page == 'manage_customers') ? 'active' : ''; ?>"
+                            href="admin_view.php?page=manage_customers">
+                            <i class="bi bi-people me-1"></i> 고객 관리
+                        </a>
+                    </li>                    
                     <li class="nav-item">
                         <a class="nav-link-custom <?php echo ($page == 'manage_site') ? 'active' : ''; ?>"
                             href="admin_view.php?page=manage_site">

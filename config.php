@@ -50,7 +50,10 @@ define('KAKAO_CLIENT_SECRET', '여기에_실제_발급받은_Secret_문자열을
  * 2. 카카오 디벨로퍼스 > 내 애플리케이션 > 제품 설정 > 카카오 로그인 > Redirect URI에 위 주소를 추가하세요.
  * 3. 만약 www.kshops24.com으로 접속하신다면 해당 버전도 함께 등록해야 합니다.
  */
-define('KAKAO_REDIRECT_URI', "https://kshops24.com/shops/customer_kakao_callback.php");
+
+// [수정] 접속한 도메인(테스트, www 포함 등)에 맞게 카카오 콜백 URL을 동적으로 생성하여 환경을 유지합니다.
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https://" : "http://";
+define('KAKAO_REDIRECT_URI', $protocol . ($_SERVER['HTTP_HOST'] ?? 'kshops24.com') . "/shops/customer_kakao_callback.php");
 
 // [전화번호 정보 관련 공지사항]
 define('PHONE_INFO_NOTICE_1',  '현지 정부의 관련법에 따라 허위 번호 도용 시 법적 처벌을 받을 수 있습니다.');
@@ -227,6 +230,67 @@ $shop_search_placeholders = [
     'realty' => '어떤 매물을 찾으시나요? (매물명, 특징 등)',
     'srv'  => '어떤 서비스를 원하시나요? (서비스명, 특징 등)'
 ];
+
+// ---------------------------------------------------------
+// [리팩토링] 글로벌 국가 통합 정보 (이름, 화폐, 국가번호, 번호 형식)
+// ---------------------------------------------------------
+global $global_country_config;
+$global_country_config = [
+    'PH' => ['name' => '필리핀', 'currency' => 'PHP', 'symbol' => '₱', 'dial' => '+63', 'placeholder' => '0917 123 4567'],
+    'KR' => ['name' => '대한민국', 'currency' => 'KRW', 'symbol' => '₩', 'dial' => '+82', 'placeholder' => '010 1234 5678'],
+    'US' => ['name' => '미국', 'currency' => 'USD', 'symbol' => '$', 'dial' => '+1', 'placeholder' => '234 567 8900'],
+    'JP' => ['name' => '일본', 'currency' => 'JPY', 'symbol' => '¥', 'dial' => '+81', 'placeholder' => '090 1234 5678'],
+    'CN' => ['name' => '중국', 'currency' => 'CNY', 'symbol' => '¥', 'dial' => '+86', 'placeholder' => '130 1234 5678'],
+    'VN' => ['name' => '베트남', 'currency' => 'VND', 'symbol' => '₫', 'dial' => '+84', 'placeholder' => '091 234 5678'],
+    'TH' => ['name' => '태국', 'currency' => 'THB', 'symbol' => '฿', 'dial' => '+66', 'placeholder' => '081 234 5678'],
+    'ID' => ['name' => '인도네시아', 'currency' => 'IDR', 'symbol' => 'Rp', 'dial' => '+62', 'placeholder' => '0812 3456 7890'],
+    'MY' => ['name' => '말레이시아', 'currency' => 'MYR', 'symbol' => 'RM', 'dial' => '+60', 'placeholder' => '012 345 6789'],
+    'SG' => ['name' => '싱가포르', 'currency' => 'SGD', 'symbol' => 'S$', 'dial' => '+65', 'placeholder' => '8123 4567'],
+    'HK' => ['name' => '홍콩', 'currency' => 'HKD', 'symbol' => 'HK$', 'dial' => '+852', 'placeholder' => '9123 4567'],
+    'TW' => ['name' => '대만', 'currency' => 'TWD', 'symbol' => 'NT$', 'dial' => '+886', 'placeholder' => '0912 345 678'],
+    'MO' => ['name' => '마카오', 'currency' => 'MOP', 'symbol' => 'MOP$', 'dial' => '+853', 'placeholder' => '6612 3456'],
+    'KH' => ['name' => '캄보디아', 'currency' => 'KHR', 'symbol' => '៛', 'dial' => '+855', 'placeholder' => '012 345 678'],
+    'MM' => ['name' => '미얀마', 'currency' => 'MMK', 'symbol' => 'K', 'dial' => '+95', 'placeholder' => '09 123 456 789'],
+    'IN' => ['name' => '인도', 'currency' => 'INR', 'symbol' => '₹', 'dial' => '+91', 'placeholder' => '91234 56789'],
+    'AU' => ['name' => '호주', 'currency' => 'AUD', 'symbol' => 'A$', 'dial' => '+61', 'placeholder' => '0412 345 678'],
+    'NZ' => ['name' => '뉴질랜드', 'currency' => 'NZD', 'symbol' => 'NZ$', 'dial' => '+64', 'placeholder' => '021 234 5678'],
+    'CA' => ['name' => '캐나다', 'currency' => 'CAD', 'symbol' => 'C$', 'dial' => '+1', 'placeholder' => '234 567 8900'],
+    'GB' => ['name' => '영국', 'currency' => 'GBP', 'symbol' => '£', 'dial' => '+44', 'placeholder' => '07700 900077'],
+    'FR' => ['name' => '프랑스', 'currency' => 'EUR', 'symbol' => '€', 'dial' => '+33', 'placeholder' => '06 12 34 56 78'],
+    'DE' => ['name' => '독일', 'currency' => 'EUR', 'symbol' => '€', 'dial' => '+49', 'placeholder' => '0151 23456789'],
+    'IT' => ['name' => '이탈리아', 'currency' => 'EUR', 'symbol' => '€', 'dial' => '+39', 'placeholder' => '312 345 6789'],
+    'ES' => ['name' => '스페인', 'currency' => 'EUR', 'symbol' => '€', 'dial' => '+34', 'placeholder' => '612 345 678'],
+    'NL' => ['name' => '네덜란드', 'currency' => 'EUR', 'symbol' => '€', 'dial' => '+31', 'placeholder' => '06 12345678'],
+    'CH' => ['name' => '스위스', 'currency' => 'CHF', 'symbol' => 'CHF', 'dial' => '+41', 'placeholder' => '079 123 45 67'],
+    'RU' => ['name' => '러시아', 'currency' => 'RUB', 'symbol' => '₽', 'dial' => '+7', 'placeholder' => '912 345 67 89'],
+    'AE' => ['name' => '아랍에미리트', 'currency' => 'AED', 'symbol' => 'د.إ', 'dial' => '+971', 'placeholder' => '50 123 4567'],
+    'SA' => ['name' => '사우디아라비아', 'currency' => 'SAR', 'symbol' => 'ر.س', 'dial' => '+966', 'placeholder' => '51 234 5678'],
+    'ZA' => ['name' => '남아프리카공화국', 'currency' => 'ZAR', 'symbol' => 'R', 'dial' => '+27', 'placeholder' => '082 123 4567'],
+    'BR' => ['name' => '브라질', 'currency' => 'BRL', 'symbol' => 'R$', 'dial' => '+55', 'placeholder' => '11 91234-5678'],
+    'AR' => ['name' => '아르헨티나', 'currency' => 'ARS', 'symbol' => '$', 'dial' => '+54', 'placeholder' => '9 11 1234-5678'],
+    'MX' => ['name' => '멕시코', 'currency' => 'MXN', 'symbol' => '$', 'dial' => '+52', 'placeholder' => '55 1234 5678'],
+];
+
+global $country_phone_formats;
+$country_phone_formats = [];
+foreach ($global_country_config as $code => $data) {
+    $country_phone_formats[$code] = [
+        'placeholder' => $data['placeholder'],
+        'hint' => '(' . $data['name'] . ')'
+    ];
+}
+
+function getCountryPhoneFormat($country_code) {
+    global $country_phone_formats;
+    return $country_phone_formats[strtoupper($country_code)] ?? $country_phone_formats['PH'];
+}
+
+function getCountryDisplayLabel($country_code) {
+    global $global_country_config;
+    $country_code = strtoupper($country_code);
+    $c = $global_country_config[$country_code] ?? $global_country_config['PH'];
+    return "{$c['name']} ({$c['currency']}, {$c['symbol']} / {$c['dial']})";
+}
 
 // ---------------------------------------------------------
 // 5. 공통 UI 라벨 (Common UI Labels) 기본값 정의

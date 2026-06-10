@@ -261,7 +261,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-telephone me-1"></i> <?php echo __('현지 핸드폰 번호'); ?> *</label>
                         <div class="input-group" id="phone-input-group">
-                            <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="09XX-XXX-XXXX" oninput="formatPhoneInput(this)" maxlength="13" required>
+                            <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="+63 917 123 4567" oninput="formatPhoneInput(this)" maxlength="20" required>
                             <?php if ($is_del): ?>
                             <button type="button" class="btn btn-outline-primary fw-bold" id="btn-fetch-address" onclick="fetchLastAddress()"><?php echo __('기존 배달 정보 조회'); ?></button>
                             <?php endif; ?>

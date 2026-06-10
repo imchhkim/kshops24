@@ -137,16 +137,38 @@ $monthly_fee = $_GET['monthly_fee'] ?? '상담 후 결정';
 
     <div class="container">
         <div class="sel-card">
-            <div class="text-center mb-5">
-                <h3 class="fw-bold mb-3" style="color:var(--main-blue);"><i class="bi bi-shop-window me-2"></i>비즈니스 업종 선택</h3>
-                <p class="text-muted mb-0">상점 개설 후 최적화된 홈페이지 기능과 디자인을 제공받기 위해 <br><strong>사장님의 비즈니스와 가장 잘 맞는 카테고리</strong>를 신중히 선택해 주세요.</p>
-                <p class="medium text-danger mt-2 fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>한번 생성된 상점의 카테고리는 </br>향후 변경이 불가능합니다.</p>
-            </div>
 
             <form action="register.php" method="GET" id="categoryForm">
                 <input type="hidden" name="setup_fee" value="<?php echo htmlspecialchars($setup_fee); ?>">
                 <input type="hidden" name="monthly_fee" value="<?php echo htmlspecialchars($monthly_fee); ?>">
                 <?php if (isset($_GET['dev_test'])) echo '<input type="hidden" name="dev_test" value="1">'; ?>
+
+                <!-- 지역 선택-->
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold mb-3" style="color:var(--main-blue);"><i class="bi bi-globe me-2"></i>국가(위치) 선택</h3>
+                    <p class="text-muted mb-0">상점(혹은 서비스)이 개설되어 있는 <strong>국가(위치)를 선택</strong>하세요.<br>위치는 향후 수정 가능합니다.</p>
+                </div>
+
+                <div class="row justify-content-center mb-5">
+                    <div class="col-md-8">
+                        <select name="country" id="country" class="form-select form-select-lg border-2 shadow-sm text-center" style="border-color: var(--main-blue); border-radius: 12px; cursor: pointer;" required>
+                            <option value="" disabled selected>== 서비스 국가(지역)를 선택하세요 ==</option>
+                            <?php
+                            global $global_country_config;
+                            foreach ($global_country_config as $code => $data) {
+                                echo '<option value="' . htmlspecialchars($code) . '">' . htmlspecialchars($data['name']) . ' (' . htmlspecialchars($code) . ')</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 업종 선택-->
+                <div class="text-center mb-5 border-top pt-5">
+                    <h3 class="fw-bold mb-3" style="color:var(--main-blue);"><i class="bi bi-shop-window me-2"></i>비즈니스 업종 선택</h3>
+                    <p class="text-muted mb-0">상점 개설 후 최적화된 홈페이지 기능과 디자인을 제공받기 위해 <br><strong>사장님의 비즈니스와 가장 잘 맞는 카테고리</strong>를 신중히 선택해 주세요.</p>
+                    <p class="medium text-danger mt-2 fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>상점 카테고리는 향후 수정이 불가능합니다!!!</p>
+                </div>
 
                 <div class="row g-4 mb-5">
                     <div class="col-md-4">
@@ -186,6 +208,13 @@ $monthly_fee = $_GET['monthly_fee'] ?? '상담 후 결정';
     <script>
         // 카테고리 선택 여부 확인 후 폼 제출
         function checkCategorySelection() {
+            const selectedCountry = document.getElementById('country').value;
+            if (!selectedCountry) {
+                alert('서비스가 제공되는 국가(지역)를 선택해 주세요.');
+                document.getElementById('country').focus();
+                return false;
+            }
+
             const selectedCategory = document.querySelector('.category-option:checked');
             if (!selectedCategory) {
                 alert('상점 개설을 위해 비즈니스 카테고리를 반드시 선택하셔야 합니다.');

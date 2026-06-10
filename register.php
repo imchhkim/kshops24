@@ -182,7 +182,8 @@ $form_data = [
     'kakao_channel_id' => '',
     'subdomain' => '',
     'custom_domain' => '',
-    'category' => $_REQUEST['category'] ?? 'fnb' // sel_category.php에서 넘어온 값
+    'category' => $_REQUEST['category'] ?? 'fnb', // sel_category.php에서 넘어온 값
+    'country' => $_REQUEST['country'] ?? 'PH' // sel_category.php에서 넘어온 국가코드
 ];
 
 // pre_register.php에서 넘어온 계약 비용 정보 (없을 경우 기본값 적용)
@@ -249,8 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_registration'])
                 manager_email, manager_password, manager_name, manager_name_en, 
                 shop_name, shop_name_en, phone_mobile, phone_landline, 
                 kakao_id, kakao_channel_id, subdomain, custom_domain, 
-                status, category
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)";
+                status, category, country
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)";
 
             $stmt = $pdo->prepare($sql);
             $result = $stmt->execute([
@@ -266,7 +267,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_registration'])
                 $form_data['kakao_channel_id'] === '' ? null : $form_data['kakao_channel_id'],
                 $form_data['subdomain'],
                 $form_data['custom_domain'] === '' ? null : $form_data['custom_domain'],
-                $form_data['category']
+                $form_data['category'],
+                $form_data['country']
             ]);
 
             if (!$result) {
@@ -576,6 +578,7 @@ $categories = $json_cats ? json_decode($json_cats, true) : [
                 <input type="hidden" name="setup_fee" value="<?php echo htmlspecialchars($setup_fee); ?>">
                 <input type="hidden" name="monthly_fee" value="<?php echo htmlspecialchars($monthly_fee); ?>">
                 <input type="hidden" name="category" id="category" value="<?php echo htmlspecialchars($form_data['category']); ?>">
+                <input type="hidden" name="country" id="country" value="<?php echo htmlspecialchars($form_data['country']); ?>">
                 <?php if ($FOR_TEST === "YES") echo '<input type="hidden" name="dev_test" value="1">'; ?>
 
                 <div class="section-title">1. 계정 정보 <span class="text-danger">(필수)</span></div>

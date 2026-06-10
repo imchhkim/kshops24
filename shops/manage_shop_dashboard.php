@@ -415,7 +415,12 @@ $cat_dashboard_path = $_SERVER['DOCUMENT_ROOT'] . "/shops/{$shop_category}/admin
     </div>
 </div>
 
+<!-- [추가] 글로벌 전화번호 자동 포맷팅 라이브러리 (libphonenumber-js) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/libphonenumber-js/1.10.44/libphonenumber-js.min.js"></script>
+
 <script>
+    const SHOP_COUNTRY_CODE = "<?php echo $ui['country'] ?? 'PH'; ?>";
+
     document.addEventListener('DOMContentLoaded', function() {
         // [JS] 수정 모달 실시간 중복 체크 로직
         document.querySelectorAll('.check-dup').forEach(input => {
@@ -440,39 +445,17 @@ $cat_dashboard_path = $_SERVER['DOCUMENT_ROOT'] . "/shops/{$shop_category}/admin
     });
 
     /**
-     * [추가] 실시간 전화번호 포맷팅 함수 (JS)
-     * - Mobile: 09XX-XXX-XXXX
-     * - Landline (Manila): 02-XXXX-XXXX
-     * - Landline (Province): 0XX-XXX-XXXX
+     * [개선] 구글 libphonenumber-js 기반 글로벌 자동 전화번호 포맷팅
      */
     function formatPhoneInput(input) {
-        let val = input.value.replace(/\D/g, ''); // 숫자만 남기기
-        let result = '';
-
-        if (input.name === 'phone_mobile') {
-            // 필리핀 모바일: 0917-123-4567
-            if (val.length <= 4) {
-                result = val;
-            } else if (val.length <= 7) {
-                result = val.slice(0, 4) + '-' + val.slice(4);
-            } else {
-                result = val.slice(0, 4) + '-' + val.slice(4, 7) + '-' + val.slice(7, 11);
-            }
+        if (typeof libphonenumber !== 'undefined') {
+            // 사용자가 타이핑하는 동안(As You Type) 상점 국가 설정에 맞춰 자동 변환
+            const formatter = new libphonenumber.AsYouType(SHOP_COUNTRY_CODE);
+            input.value = formatter.input(input.value);
         } else {
-            // 유선 전화 (랜드라인)
-            if (val.startsWith('02')) {
-                // 메트로 마닐라 (02-8XXX-XXXX 등 10자리)
-                if (val.length <= 2) result = val;
-                else if (val.length <= 6) result = val.slice(0, 2) + '-' + val.slice(2);
-                else result = val.slice(0, 2) + '-' + val.slice(2, 6) + '-' + val.slice(6, 10);
-            } else {
-                // 기타 지역 (043-123-4567 등 10~11자리)
-                if (val.length <= 3) result = val;
-                else if (val.length <= 6) result = val.slice(0, 3) + '-' + val.slice(3);
-                else result = val.slice(0, 3) + '-' + val.slice(3, 6) + '-' + val.slice(6, 10);
-            }
+            // 라이브러리 로드 실패 시 숫자와 특수문자(+) 만 남기는 폴백
+            input.value = input.value.replace(/[^\d+]/g, '');
         }
-        input.value = result;
     }
 
     /**

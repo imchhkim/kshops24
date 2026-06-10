@@ -158,26 +158,20 @@ if (!isset($shop_id)) exit; // 직접 접근 방지
                     </div>
                 <?php endif; ?>
 
-                <!-- 상점 기본 화폐 설정 -->
+                <!-- 상점 기준 국가 (화폐 및 전화번호 포맷 자동 적용) -->
                 <div class="mb-4">
-                    <label class="form-label small fw-bold"><i class="bi bi-cash-coin text-primary me-1"></i> 상점 기본 화폐 단위</label>
-                    <select name="ui[currency]" class="form-select form-select-sm">
-                        <option value="PHP" <?php echo (($ui['currency'] ?? 'PHP') === 'PHP') ? 'selected' : ''; ?>>필리핀 페소 (PHP, ₱)</option>
-                        <option value="KRW" <?php echo (($ui['currency'] ?? 'PHP') === 'KRW') ? 'selected' : ''; ?>>대한민국 원 (KRW, ₩)</option>
-                        <option value="USD" <?php echo (($ui['currency'] ?? 'PHP') === 'USD') ? 'selected' : ''; ?>>미국 달러 (USD, $)</option>
-                        <option value="EUR" <?php echo (($ui['currency'] ?? 'PHP') === 'EUR') ? 'selected' : ''; ?>>유로 (EUR, €)</option>
-                        <option value="JPY" <?php echo (($ui['currency'] ?? 'PHP') === 'JPY') ? 'selected' : ''; ?>>일본 엔 (JPY, ¥)</option>
-                        <option value="CNY" <?php echo (($ui['currency'] ?? 'PHP') === 'CNY') ? 'selected' : ''; ?>>중국 위안 (CNY, ¥)</option>
-                        <option value="GBP" <?php echo (($ui['currency'] ?? 'PHP') === 'GBP') ? 'selected' : ''; ?>>영국 파운드 (GBP, £)</option>
-                        <option value="AUD" <?php echo (($ui['currency'] ?? 'PHP') === 'AUD') ? 'selected' : ''; ?>>호주 달러 (AUD, A$)</option>
-                        <option value="CAD" <?php echo (($ui['currency'] ?? 'PHP') === 'CAD') ? 'selected' : ''; ?>>캐나다 달러 (CAD, C$)</option>
-                        <option value="SGD" <?php echo (($ui['currency'] ?? 'PHP') === 'SGD') ? 'selected' : ''; ?>>싱가포르 달러 (SGD, S$)</option>
-                        <option value="HKD" <?php echo (($ui['currency'] ?? 'PHP') === 'HKD') ? 'selected' : ''; ?>>홍콩 달러 (HKD, HK$)</option>
-                        <option value="TWD" <?php echo (($ui['currency'] ?? 'PHP') === 'TWD') ? 'selected' : ''; ?>>대만 달러 (TWD, NT$)</option>
-                        <option value="VND" <?php echo (($ui['currency'] ?? 'PHP') === 'VND') ? 'selected' : ''; ?>>베트남 동 (VND, ₫)</option>
-                        <option value="THB" <?php echo (($ui['currency'] ?? 'PHP') === 'THB') ? 'selected' : ''; ?>>태국 바트 (THB, ฿)</option>
-                        <option value="IDR" <?php echo (($ui['currency'] ?? 'PHP') === 'IDR') ? 'selected' : ''; ?>>인도네시아 루피아 (IDR, Rp)</option>
-                        <option value="MYR" <?php echo (($ui['currency'] ?? 'PHP') === 'MYR') ? 'selected' : ''; ?>>말레이시아 링깃 (MYR, RM)</option>
+                    <label class="form-label small fw-bold"><i class="bi bi-globe-americas text-primary me-1"></i> 상점 기준 국가 (화폐 및 연락처 포맷 적용)</label>
+                    <select name="ui[country]" class="form-select form-select-sm">
+                        <?php
+                        global $global_country_config;
+                        if (isset($global_country_config)) {
+                            foreach ($global_country_config as $code => $c) {
+                                $selected = (($ui['country'] ?? 'PH') === $code) ? 'selected' : '';
+                                $label = htmlspecialchars("{$c['name']} ({$c['currency']}, {$c['symbol']} / {$c['dial']})");
+                                echo "<option value=\"{$code}\" {$selected}>{$label}</option>\n";
+                            }
+                        }
+                        ?>
                     </select>
                 </div>
 
@@ -208,28 +202,44 @@ if (!isset($shop_id)) exit; // 직접 접근 방지
                             'th'   => '태국어 (Th)',
                             'id'   => '인도네시아어 (Id)',
                             'ms'   => '말레이시아어 (Ms)',
+                            'km'   => '크메르어 (Km)',
+                            'my'   => '미얀마어 (My)',
+                            'hi'   => '힌디어 (Hi)',
                             'es'   => '스페인어 (Es)',
                             'fr'   => '프랑스어 (Fr)',
                             'de'   => '독일어 (De)',
-                            'ru'   => '러시아어 (Ru)'
+                            'it'   => '이탈리아어 (It)',
+                            'nl'   => '네덜란드어 (Nl)',
+                            'ru'   => '러시아어 (Ru)',
+                            'ar'   => '아랍어 (Ar)',
+                            'pt'   => '포르투갈어 (Pt)',
+                            'etc'  => '직접 입력 (기타)'
                         ];
                         ?>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-primary mb-1">추가 언어 1</label>
-                                <select name="ui[multilingual_lang1]" id="multilingual_lang1" class="form-select form-select-sm">
+                                <select name="ui[multilingual_lang1]" id="multilingual_lang1" class="form-select form-select-sm" onchange="toggleCustomLangInput(1)">
                                     <?php foreach ($supported_langs as $code => $name): ?>
                                         <option value="<?php echo $code; ?>" <?php echo (($ui['multilingual_lang1'] ?? 'en') === $code) ? 'selected' : ''; ?>><?php echo $name; ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div id="custom_lang1_wrap" class="mt-2" style="<?php echo (($ui['multilingual_lang1'] ?? 'none') === 'etc') ? 'display:block;' : 'display:none;'; ?>">
+                                    <input type="text" name="ui[multilingual_lang1_custom_name]" class="form-control form-control-sm mb-1" placeholder="언어명 (예: 아랍어)" value="<?php echo htmlspecialchars($ui['multilingual_lang1_custom_name'] ?? ''); ?>">
+                                    <input type="text" name="ui[multilingual_lang1_custom_code]" class="form-control form-control-sm" placeholder="언어코드 (예: ar)" value="<?php echo htmlspecialchars($ui['multilingual_lang1_custom_code'] ?? ''); ?>">
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold text-primary mb-1">추가 언어 2</label>
-                                <select name="ui[multilingual_lang2]" id="multilingual_lang2" class="form-select form-select-sm">
+                                <select name="ui[multilingual_lang2]" id="multilingual_lang2" class="form-select form-select-sm" onchange="toggleCustomLangInput(2)">
                                     <?php foreach ($supported_langs as $code => $name): ?>
                                         <option value="<?php echo $code; ?>" <?php echo (($ui['multilingual_lang2'] ?? 'none') === $code) ? 'selected' : ''; ?>><?php echo $name; ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <div id="custom_lang2_wrap" class="mt-2" style="<?php echo (($ui['multilingual_lang2'] ?? 'none') === 'etc') ? 'display:block;' : 'display:none;'; ?>">
+                                    <input type="text" name="ui[multilingual_lang2_custom_name]" class="form-control form-control-sm mb-1" placeholder="언어명 (예: 힌디어)" value="<?php echo htmlspecialchars($ui['multilingual_lang2_custom_name'] ?? ''); ?>">
+                                    <input type="text" name="ui[multilingual_lang2_custom_code]" class="form-control form-control-sm" placeholder="언어코드 (예: hi)" value="<?php echo htmlspecialchars($ui['multilingual_lang2_custom_code'] ?? ''); ?>">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -475,6 +485,17 @@ if (!isset($shop_id)) exit; // 직접 접근 방지
         const optionsWrap = document.getElementById('multilingual-options');
         if (optionsWrap) {
             optionsWrap.style.display = isChecked ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * [UX] 다국어 지원 직접 입력(기타) 옵션 토글
+     */
+    function toggleCustomLangInput(num) {
+        const select = document.getElementById('multilingual_lang' + num);
+        const wrap = document.getElementById('custom_lang' + num + '_wrap');
+        if (select && wrap) {
+            wrap.style.display = (select.value === 'etc') ? 'block' : 'none';
         }
     }
 

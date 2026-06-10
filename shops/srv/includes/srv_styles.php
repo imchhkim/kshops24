@@ -308,4 +308,36 @@
         background-color: transparent !important;
         color: #dc3545 !important;
     }
+
+    /* [정석] 달력 '오늘' 날짜 및 주말 색상 표준 스타일 (Flatpickr 기준) */
+    .flatpickr-calendar .today {
+        background-color: #e7f1ff !important;
+        border-color: #004aad !important;
+        color: #004aad !important;
+        font-weight: bold !important;
+    }
+
+    .flatpickr-calendar .today:hover {
+        background-color: #d0e3ff !important;
+    }
+
+    /* 일요일 (빨강) */
+    .flatpickr-calendar .flatpickr-weekday:nth-child(1),
+    .flatpickr-calendar .flatpickr-day:nth-child(7n+1) {
+        color: #dc3545 !important;
+    }
+
+    /* 토요일 (파랑) */
+    .flatpickr-calendar .flatpickr-weekday:nth-child(7),
+    .flatpickr-calendar .flatpickr-day:nth-child(7n) {
+        color: #0d6efd !important;
+    }
+
+    /* 선택된 날짜는 흰색 글씨 유지 */
+    .flatpickr-calendar .flatpickr-day.selected,
+    .flatpickr-calendar .selected {
+        background-color: #004aad !important;
+        border-color: #004aad !important;
+        color: #ffffff !important;
+    }
 </style>

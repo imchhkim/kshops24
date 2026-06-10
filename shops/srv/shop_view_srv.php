@@ -448,15 +448,16 @@ uasort($display_sections, function ($a, $b) {
 
 
 <!-- 카카오톡에 로그인 하지 않은 상태의 로직
-1. "나의 문의 내역" 플로팅 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "로그인 없이 계속하기" 버튼을 클릭하면, "나의 문의 내역" 모달이 뜬다.
-1-1. "나의 문의 내역" 플로팅 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "카카오톡으로 1초 로그인" 버튼을 클릭하면, "카카오톡으로 로그인 성공!" 모달 후, "나의 문의 내역" 모달이 뜬다.
+1. "나의 예약" 플로팅 버튼을 누르면, 브라우저에 고객의 전화번호가 저장되어 있는지 먼저 확인한다. 저장되어 있다면 그 전화번호로 검색된 "나의 예약 내역" 모달이 뜬다. 고객의 전화 번호가 저장되어 있지 않다면, "로그인 방법 선택" 모달이 뜬다. -> "로그인 없이 계속하기" 버튼을 클릭하면, "나의 예약 내역" 모달이 뜨고, 전화번호를 입력 받는다. 고객이 전화번호를 입력하고 "조회" 버튼을 누르면, 해당 번호로 등록된 예약 내역이 보인다.
+
+1-1. "나의 예약" 플로팅 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "카카오톡으로 1초 로그인" 버튼을 클릭하면, "카카오톡으로 로그인 성공!" 모달 후, "나의 예약" 모달이 뜬다.
 
 
-2. "관심 매물 조회" 플로팅 버튼을 누르면, "관심 매물 목록" 모달이 뜬다. "문의 접수 완료하기" 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "로그인 없이 계속하기" 버튼을 클릭하면, "고개 문의가 등록되었습니다" 알림 모달이 뜬다.
-2-1. "관심 매물 조회" 플로팅 버튼을 누르면, "관심 매물 목록" 모달이 뜬다. "문의 접수 완료하기" 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "카카오톡으로 1초 로그인" 버튼을 클릭하면, "카카오톡으로 로그인 성공!" 모달 후, "고개 문의가 등록되었습니다" 알림 모달이 뜬다. -->
+2. "예약" 플로팅 버튼을 누르면, "관심 매물 목록" 모달이 뜬다. "문의 접수 완료하기" 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "로그인 없이 계속하기" 버튼을 클릭하면, "고개 문의가 등록되었습니다" 알림 모달이 뜬다.
+2-1. "예약" 플로팅 버튼을 누르면, "관심 매물 목록" 모달이 뜬다. "문의 접수 완료하기" 버튼을 누르면, "로그인 방법 선택" 모달이 뜬다. -> "카카오톡으로 1초 로그인" 버튼을 클릭하면, "카카오톡으로 로그인 성공!" 모달 후, "고개 문의가 등록되었습니다" 알림 모달이 뜬다. -->
 
 <!-- 카카오톡에 로그인한 상태의 로직
-1. "나의 문의 내역" 플로팅 버튼을 누르면, "문의 내역 조회" 모달이 뜬다.
+1. "나의 예약" 플로팅 버튼을 누르면, "예약 내역 조회" 모달이 뜬다.
 2. "카트보기" 플로팅 버튼을 누르면, "카트 확인" 모달이 뜬다. "주문하기" 버튼을 누르면, "주문서 작성" 모달이 뜬다. -->
 
 <!-- [플로팅 바]: 예약 내역 및 관심 서비스 조회 -->
@@ -464,7 +465,7 @@ uasort($display_sections, function ($a, $b) {
     <div class="row g-2 justify-content-center">
         <div class="col-6" id="btn-history-col">
             <!-- 서비스/예약 전용 문의 내역 조회 로직 -->
-            <button class="cart-btn-secondary w-100 d-flex align-items-center justify-content-center" onclick="openServiceInquiryHistoryModal()">
+            <button class="cart-btn-secondary w-100 d-flex align-items-center justify-content-center" onclick="checkAndOpenHistoryModal()">
                 <?php
                 $my_inquiry_count = 0;
                 $customer_phone_for_count = preg_replace('/[^0-9]/', '', $_SESSION['customer_ph_phone'] ?? '');
@@ -474,7 +475,7 @@ uasort($display_sections, function ($a, $b) {
                     $my_inquiry_count = (int)$stmt_inq_cnt->fetchColumn();
                 }
                 ?>
-                <i class="bi bi-clock-history me-2"></i> <?php echo mb_strimwidth(__('예약'), 0, 10, '...', 'UTF-8'); ?> (<span id="order-count-badge"><?php echo $my_inquiry_count; ?></span>)
+                <i class="bi bi-clock-history me-2"></i> <?php echo mb_strimwidth(__('나의 예약'), 0, 10, '...', 'UTF-8'); ?> (<span id="order-count-badge"><?php echo $my_inquiry_count; ?></span>)
             </button>
         </div>
         <div class="col-6" id="btn-order-col" style="display:none;">

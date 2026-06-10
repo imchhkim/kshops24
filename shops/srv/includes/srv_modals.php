@@ -96,7 +96,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label small fw-bold text-dark"><i class="bi bi-telephone me-1"></i> <?php echo __('연락 가능한 핸드폰 번호 *'); ?></label>
-                                <input type="tel" id="single_customer_phone" class="form-control" placeholder="<?php echo htmlspecialchars(__('09XX-XXX-XXXX')); ?>" oninput="formatPhoneInput(this)" maxlength="13" required>
+                                <input type="tel" id="single_customer_phone" class="form-control" placeholder="<?php echo htmlspecialchars(__('+63 917 123 4567')); ?>" oninput="formatPhoneInput(this)" maxlength="20" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label small fw-bold text-dark"><i class="bi bi-chat-text me-1"></i> <?php echo __('상세 문의/요청 사항 *'); ?></label>
@@ -128,10 +128,6 @@
                 <div id="cart-view-items-list" class="mb-4" style="max-height: 350px; overflow-y: auto;"></div>
 
                 <!-- 서비스 전용 안내 문구 -->
-                <div class="alert alert-secondary small text-center py-2 mb-3">
-                    <i class="bi bi-info-circle me-1"></i>
-                    <?php echo __('정확한 서비스 비용 및 시간은 예약 확정 시 안내해 드립니다.'); ?>
-                </div>
                 <div id="free-delivery-notice" class="d-none"></div>
                 <form id="orderForm">
                     <!-- [추가] 예약 내역 존재 시 알림 배너 -->
@@ -154,7 +150,7 @@
                     
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-telephone me-1"></i> <?php echo __('연락 가능한 핸드폰 번호 *'); ?></label>
-                        <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="<?php echo htmlspecialchars(__('09XX-XXX-XXXX')); ?>" oninput="formatPhoneInput(this)" maxlength="13" required>
+                        <input type="tel" id="customer_phone" class="form-control form-control-lg" placeholder="<?php echo htmlspecialchars(__('+63 917 123 4567')); ?>" oninput="formatPhoneInput(this)" maxlength="20" required>
                     </div>
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-dark"><i class="bi bi-chat-text me-1"></i> <?php echo __('상세 문의/요청 사항 *'); ?></label>
@@ -189,9 +185,35 @@
                 </form>
 
                 <!-- [수정] 회원 정보 표시 영역에 ID 부여 -->
-                <div id="service-member-history-info" class="alert alert-light border border-dark border-opacity-10 mb-4 shadow-sm text-center rounded-4">
-                    <p class="small text-muted mb-1"><?php echo __('조회 기준 연락처'); ?></p>
-                    <h5 class="fw-bold text-dark m-0" id="service-history-phone-display"><i class="bi bi-telephone text-primary me-2"></i></h5>
+                <div id="service-member-history-info" class="alert alert-light border border-dark border-opacity-10 mb-4 shadow-sm rounded-4 p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-start">
+                            <p class="small text-muted mb-1"><?php echo __('조회 기준 연락처'); ?></p>
+                            <h5 class="fw-bold text-dark m-0" id="service-history-phone-display"><i class="bi bi-telephone text-primary me-2"></i></h5>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm" onclick="clearSavedGuestPhone()">
+                            <i class="bi bi-trash me-1"></i><?php echo __('삭제'); ?>
+                        </button>
+                    </div>
+                    <script>
+                    function clearSavedGuestPhone() {
+                        if(confirm('<?php echo addslashes(__('저장된 연락처를 삭제하시겠습니까?')); ?>')) {
+                            // 브라우저 로컬 스토리지에 저장된 연락처 데이터 일괄 삭제
+                            localStorage.removeItem('ps24_guest_phone');
+                            localStorage.removeItem('srv_last_search_phone');
+                            localStorage.removeItem('realty_last_search_phone');
+                            
+                            // 현재 열려있는 '나의 문의 내역' 모달 닫기
+                            const modalEl = document.getElementById('serviceInquiryHistoryModal');
+                            if (modalEl && typeof bootstrap !== 'undefined') {
+                                const bsModal = bootstrap.Modal.getInstance(modalEl);
+                                if (bsModal) bsModal.hide();
+                            }
+                            
+                            if(typeof showToast === 'function') showToast('<?php echo addslashes(__('연락처가 성공적으로 삭제되었습니다.')); ?>', 'success');
+                        }
+                    }
+                    </script>
                 </div>
                 <div id="service-history-results" style="max-height: 400px; overflow-y: auto;">
                     <div class="text-center py-5 text-muted">

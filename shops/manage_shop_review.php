@@ -29,18 +29,35 @@ $supported_langs_name = [
     'th' => '태국어',
     'id' => '인도네시아어',
     'ms' => '말레이시아어',
+    'km' => '크메르어',
+    'my' => '미얀마어',
+    'hi' => '힌디어',
     'es' => '스페인어',
     'fr' => '프랑스어',
     'de' => '독일어',
-    'ru' => '러시아어'
+    'it' => '이탈리아어',
+    'nl' => '네덜란드어',
+    'ru' => '러시아어',
+    'ar' => '아랍어',
+    'pt' => '포르투갈어'
 ];
 $is_multi = (($ui['is_multilingual'] ?? 0) == 1);
 $lang1 = $ui['multilingual_lang1'] ?? 'none';
 $lang2 = $ui['multilingual_lang2'] ?? 'none';
+
+$lang1_display = ($lang1 === 'etc') ? ($ui['multilingual_lang1_custom_name'] ?? '제1외국어') : ($supported_langs_name[$lang1] ?? '제1외국어');
 $lang1_code = $lang1;
+if ($lang1 === 'etc') {
+    $lang1_code = strtolower(trim($ui['multilingual_lang1_custom_code'] ?? 'etc1'));
+    if (empty($lang1_code)) $lang1_code = 'etc1';
+}
+
+$lang2_display = ($lang2 === 'etc') ? ($ui['multilingual_lang2_custom_name'] ?? '제2외국어') : ($supported_langs_name[$lang2] ?? '제2외국어');
 $lang2_code = $lang2;
-$lang1_display = $supported_langs_name[$lang1_code] ?? '제1외국어';
-$lang2_display = $supported_langs_name[$lang2_code] ?? '제2외국어';
+if ($lang2 === 'etc') {
+    $lang2_code = strtolower(trim($ui['multilingual_lang2_custom_code'] ?? 'etc2'));
+    if (empty($lang2_code)) $lang2_code = 'etc2';
+}
 
 // [AJAX] 리뷰 노출 설정 변경
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_review_display') {

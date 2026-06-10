@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("SELECT id FROM platform_customers WHERE ph_phone = ? AND id != ?");
         $stmt->execute([$phone, $customer_id]);
         if ($stmt->fetch()) {
-            echo json_encode(['status' => 'duplicate', 'message' => '이미 KShops24 플랫폼에 가입되어 사용 중인 전화번호입니다.<br>본인의 전화번호를 확인해 주세요.']);
+            echo json_encode(['status' => 'duplicate', 'message' => '해당 전화번호는 다른 고객이 이미 사용중 입니다.']);
         } else {
             echo json_encode(['status' => 'available']);
         }

@@ -13,7 +13,6 @@ const notifySound = new Audio(srvNotifySoundUrl);
 let wishlist = [];
 let inquiryToDelete = null;
 let inquiryToCancel = null;
-let pendingSrvAction = null;
 window.hasConfirmedLoginChoice = false;
 
 // 모바일 환경 페이지 로딩 후 점프 방지 
@@ -38,13 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 서비스 상세 모달 이벤트 바인딩
     const detailModal = document.getElementById('menuDetailModal');
     if (detailModal) {
-        detailModal.addEventListener('hidden.bs.modal', function() {
+        detailModal.addEventListener('hidden.bs.modal', function () {
             const videoContainer = document.getElementById('menu-detail-video');
             const photoContainer = document.getElementById('menu-detail-photo');
             if (videoContainer) videoContainer.innerHTML = '';
             if (photoContainer) photoContainer.innerHTML = '';
         });
-        detailModal.addEventListener('shown.bs.modal', function() {
+        detailModal.addEventListener('shown.bs.modal', function () {
             if (!document.getElementById('single_reservation_date').value) {
                 window.renderCalendar('single');
                 window.updateAvailableTimesGrid('single');
@@ -56,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 카트 모달 이벤트 바인딩
     const cartModal = document.getElementById('cartViewModal');
     if (cartModal) {
-        cartModal.addEventListener('shown.bs.modal', function() {
+        cartModal.addEventListener('shown.bs.modal', function () {
             if (!document.getElementById('cart_reservation_date').value) {
                 window.renderCalendar('cart');
                 window.updateAvailableTimesGrid('cart');
@@ -85,13 +84,38 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('resize', updateIndicators);
         setTimeout(updateIndicators, 300);
     }
+
+    // [추가] 공통 연락처 모달(phInfoModal) 폼 제출 이벤트 가로채기 (SRV 예약 내역 조회 흐름 제어)
+    const phForm = document.getElementById('phInfoForm');
+    if (phForm) {
+        phForm.addEventListener('submit', function (e) {
+            const phoneInput = document.getElementById('ph_phone');
+            if (phoneInput && phoneInput.value.trim() !== '') {
+                const phoneStr = phoneInput.value.trim();
+                // 1. 브라우저(로컬 스토리지)에 번호 저장
+                localStorage.setItem('ps24_guest_phone', phoneStr);
+                localStorage.setItem('srv_last_search_phone', phoneStr);
+
+                // 2. 예약 내역 조회 콜백 상태라면, 폼 기본 전송을 막고 예약 내역 모달을 띄움
+                if (window.pendingPhInfoAction === 'srv_history') {
+                    e.preventDefault();
+                    if (typeof hideBsModal === 'function') hideBsModal('phInfoModal');
+
+                    setTimeout(() => {
+                        window.fetchServiceInquiryHistory(phoneStr);
+                        window.pendingPhInfoAction = null;
+                    }, 300);
+                }
+            }
+        });
+    }
 });
 
-window.toggleOrderStatusPanel = function() {
+window.toggleOrderStatusPanel = function () {
     const panel = document.getElementById('floating-order-status-panel');
     const badge = document.getElementById('floating-order-status-badge');
     if (!panel) return;
-    
+
     isOrderStatusPanelOpen = !isOrderStatusPanelOpen;
     if (isOrderStatusPanelOpen) {
         panel.classList.remove('d-none');
@@ -102,13 +126,13 @@ window.toggleOrderStatusPanel = function() {
     }
 }
 
-window.showFloatingOrderStatus = function() {
+window.showFloatingOrderStatus = function () {
     const btn = document.getElementById('floating-order-status-btn');
     if (btn) btn.classList.remove('d-none');
     if (!isOrderStatusPanelOpen) window.toggleOrderStatusPanel();
 }
 
-window.pollOrderStatus = async function() {
+window.pollOrderStatus = async function () {
     const cfg = getShopConfig();
     let phone = '';
     if (cfg && cfg.customerPhone) {
@@ -129,15 +153,15 @@ window.pollOrderStatus = async function() {
                 const currentStatus = order.status;
                 if (!isFirstPoll && knownOrderStatuses[order.id] && knownOrderStatuses[order.id] !== currentStatus) {
                     const sInfo = (cfg.orderStatusMap && cfg.orderStatusMap[currentStatus]) ? Object.assign({}, cfg.orderStatusMap[currentStatus]) : { text: currentStatus, class: 'primary' };
-                    
+
                     const toastEl = document.getElementById('orderStatusToast');
-                    if(toastEl) {
+                    if (toastEl) {
                         document.getElementById('orderStatusToastBody').innerHTML = `🔔 고객님의 예약이 <span class="badge bg-white text-${sInfo.class} ms-1">${sInfo.text}</span> 상태가 되었습니다!`;
                         toastEl.className = `toast align-items-center text-white bg-${sInfo.class} border-0 w-100 shadow-lg rounded-4`;
                         if (typeof bootstrap !== 'undefined') new bootstrap.Toast(toastEl, { autohide: false }).show();
                     }
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                    notifySound.play().catch(e => {});
+                    notifySound.play().catch(e => { });
                     if (document.getElementById('serviceInquiryHistoryModal') && document.getElementById('serviceInquiryHistoryModal').classList.contains('show')) window.fetchServiceInquiryHistory(phone);
 
                     if (!isOrderStatusPanelOpen) {
@@ -147,10 +171,10 @@ window.pollOrderStatus = async function() {
                 }
                 knownOrderStatuses[order.id] = currentStatus;
             });
-            
+
             const activeOrders = result.orders.filter(o => ['pending', 'confirmed', 'contacted'].includes(o.status));
             const hasActiveOrders = activeOrders.length > 0;
-            
+
             const btn = document.getElementById('floating-order-status-btn');
             if (btn) {
                 if (hasActiveOrders) {
@@ -160,14 +184,14 @@ window.pollOrderStatus = async function() {
                         const currentOrder = activeOrders[0];
                         const currentStatus = currentOrder.status;
                         let iconClass = 'bi-calendar-check';
-                        if (currentStatus === 'pending') iconClass = 'bi-check2-circle'; 
+                        if (currentStatus === 'pending') iconClass = 'bi-check2-circle';
                         iconEl.className = `bi ${iconClass} fs-3 text-dark`;
                     }
                 } else {
                     btn.classList.add('d-none');
                 }
             }
-            
+
             const contentPanel = document.getElementById('floating-order-status-content');
             if (contentPanel) {
                 if (!hasActiveOrders) {
@@ -190,14 +214,14 @@ window.pollOrderStatus = async function() {
                                     let summary = itemsArray.map(item => `${item.name} <span class="fw-bold text-dark">x1</span>`).join(', ');
                                     itemsHtml = `<div class="text-muted mt-2 text-break" style="font-size:0.75rem;"><i class="bi bi-cart2 me-1 text-primary"></i>${summary}</div>`;
                                 }
-                            } catch (e) {}
+                            } catch (e) { }
                         }
 
                         let timeStr = order.created_at;
                         try {
-                            let d = new Date(order.created_at.replace(/-/g, '/')); 
+                            let d = new Date(order.created_at.replace(/-/g, '/'));
                             if (!isNaN(d)) timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                        } catch (e) {}
+                        } catch (e) { }
 
                         let replyHtml = '';
                         if (order.owner_reply && order.owner_reply.trim() !== '') {
@@ -211,13 +235,13 @@ window.pollOrderStatus = async function() {
             }
             isFirstPoll = false;
         }
-    } catch (err) {}
+    } catch (err) { }
 };
 
 // ==========================================
 // [달력 렌더링 로직 통합]
 // ==========================================
-window.checkMyReservationsNotice = function(type) {
+window.checkMyReservationsNotice = function (type) {
     const cfg = getShopConfig();
     const myRes = (cfg && cfg.myReservations) ? cfg.myReservations : {};
     const noticeEl = document.getElementById(type + '_my_reservation_notice');
@@ -227,25 +251,25 @@ window.checkMyReservationsNotice = function(type) {
     }
 }
 
-window.renderCalendar = function(type, initDate = new Date()) {
+window.renderCalendar = function (type, initDate = new Date()) {
     const cfg = getShopConfig();
     const container = document.getElementById(type + '_calendar_container');
     if (!container) return;
-    
+
     const year = initDate.getFullYear();
     const month = initDate.getMonth();
     const firstDay = new Date(year, month, 1).getDay();
     const lastDate = new Date(year, month + 1, 0).getDate();
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     const days = ['일', '월', '화', '수', '목', '금', '토']; // 프론트엔드 기본값
     const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    
+
     let html = `
         <div class="d-flex justify-content-between align-items-center mb-2 px-2">
-            <button type="button" class="btn btn-sm btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width:30px; height:30px;" onclick="window.renderCalendar('${type}', new Date(${year}, ${month-1}, 1))"><i class="bi bi-chevron-left text-dark"></i></button>
+            <button type="button" class="btn btn-sm btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width:30px; height:30px;" onclick="window.renderCalendar('${type}', new Date(${year}, ${month - 1}, 1))"><i class="bi bi-chevron-left text-dark"></i></button>
             <div class="fw-bold fs-6">${year}. ${String(month + 1).padStart(2, '0')}</div>
-            <button type="button" class="btn btn-sm btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width:30px; height:30px;" onclick="window.renderCalendar('${type}', new Date(${year}, ${month+1}, 1))"><i class="bi bi-chevron-right text-dark"></i></button>
+            <button type="button" class="btn btn-sm btn-white border rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width:30px; height:30px;" onclick="window.renderCalendar('${type}', new Date(${year}, ${month + 1}, 1))"><i class="bi bi-chevron-right text-dark"></i></button>
         </div>
         <div class="d-flex w-100 mb-1">
     `;
@@ -254,7 +278,7 @@ window.renderCalendar = function(type, initDate = new Date()) {
         html += `<div class="flex-fill text-center small fw-bold ${colorClass}" style="font-size: 0.8rem;">${d}</div>`;
     });
     html += `</div><div class="d-flex flex-wrap w-100">`;
-    for(let i=0; i<firstDay; i++) {
+    for (let i = 0; i < firstDay; i++) {
         html += `<div style="width: 14.28%; padding: 2px; padding-bottom: 16px;"></div>`;
     }
     const selectedDateInput = document.getElementById(type + '_reservation_date');
@@ -275,15 +299,15 @@ window.renderCalendar = function(type, initDate = new Date()) {
         }
     }
 
-    for(let i=1; i<=lastDate; i++) {
+    for (let i = 1; i <= lastDate; i++) {
         const d = new Date(year, month, i);
-        const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
         const dayOfWeek = d.getDay();
         const dayName = dayNames[dayOfWeek];
-        
+
         let isPast = d < today;
         let isSelected = (dateStr === selectedDate);
-        
+
         let slotsForDay = availableSlotsConf[dayName] || [];
         let isHoliday = (holidaysConf[dateStr] !== undefined);
         let holidayMemo = isHoliday ? holidaysConf[dateStr] : '';
@@ -295,13 +319,13 @@ window.renderCalendar = function(type, initDate = new Date()) {
 
         let bgStyle = isSelected ? 'bg-dark text-white shadow-sm' : (isClosedDay ? 'bg-light' : 'bg-white');
         if (isSelected) btnClass = 'fw-bold text-white';
-        
+
         let cursor = (isPast || isClosedDay) ? 'not-allowed' : 'pointer';
         let clickEvent = (isPast || isClosedDay) ? '' : `onclick="window.selectDate('${type}', '${dateStr}')"`;
-        
+
         let hasMyRes = (myRes[dateStr] && myRes[dateStr].length > 0);
         let myResBadge = hasMyRes ? `<div class="position-absolute bottom-0 start-50 translate-middle-x mb-1" style="width: 4px; height: 4px; background-color: #0d6efd; border-radius: 50%;"></div>` : '';
-        
+
         let closedText = isClosedDay ? `<div class="text-danger fw-bold w-100 text-center text-truncate px-1" style="font-size: 0.65rem; position: absolute; bottom: -2px; left: 0;">휴무</div>` : '';
         if (isHoliday && !isPast) closedText = `<div class="text-danger fw-bold w-100 text-center text-truncate px-1" style="font-size: 0.65rem; position: absolute; bottom: -2px; left: 0;">${holidayMemo || '임시휴일'}</div>`;
 
@@ -323,34 +347,34 @@ window.renderCalendar = function(type, initDate = new Date()) {
     container.innerHTML = html;
 }
 
-window.selectDate = function(type, dateStr) {
+window.selectDate = function (type, dateStr) {
     const input = document.getElementById(type + '_reservation_date');
     if (input) {
         input.value = dateStr;
         const parts = dateStr.split('-');
-        window.renderCalendar(type, new Date(parts[0], parts[1]-1, 1));
+        window.renderCalendar(type, new Date(parts[0], parts[1] - 1, 1));
         window.updateAvailableTimesGrid(type);
     }
 }
 
-window.updateAvailableTimesGrid = function(type) {
+window.updateAvailableTimesGrid = function (type) {
     const cfg = getShopConfig();
     const dateInput = document.getElementById(type + '_reservation_date');
     const timeInput = document.getElementById(type + '_reservation_time');
     const timeContainer = document.getElementById(type + '_time_container');
-    if(timeInput) timeInput.value = '';
-    
+    if (timeInput) timeInput.value = '';
+
     if (!dateInput || !dateInput.value) {
         timeContainer.innerHTML = `<div class="text-muted small w-100 text-center py-2 bg-light rounded-3 border">날짜를 먼저 선택하세요.</div>`;
         return;
     }
-    
+
     const date = new Date(dateInput.value);
     const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const dayName = days[date.getDay()];
-    
+
     const now = new Date();
-    const todayDateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const todayDateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     const isToday = (dateInput.value === todayDateStr);
     const currentTimeVal = now.getHours() * 60 + now.getMinutes();
 
@@ -367,7 +391,7 @@ window.updateAvailableTimesGrid = function(type) {
             }
         }
     }
-    
+
     const maxConcurrent = (cfg && cfg.reservationSettings && cfg.reservationSettings.max_concurrent) ? parseInt(cfg.reservationSettings.max_concurrent) : 1;
     const bookedSlots = (cfg && cfg.bookedSlots) ? cfg.bookedSlots : {};
     const bookedForDate = bookedSlots[dateInput.value] || {};
@@ -384,11 +408,11 @@ window.updateAvailableTimesGrid = function(type) {
         availableSlots.forEach(slot => {
             let isMyResTime = myResForDate.some(r => r.time === slot);
             let myResIcon = isMyResTime ? ' <i class="bi bi-check-circle-fill text-primary ms-1" title="나의 예약"></i>' : '';
-            
+
             let bookedCount = bookedForDate[slot] || 0;
             let remainCount = maxConcurrent - bookedCount;
             if (remainCount < 0) remainCount = 0;
-            
+
             let slotTimeVal = 0;
             const timeParts = slot.split(':');
             if (timeParts.length === 2) {
@@ -399,7 +423,7 @@ window.updateAvailableTimesGrid = function(type) {
             let btnClass = 'btn-outline-dark';
             let disabledAttr = '';
             let remainHtml = `<div style="font-size: 0.65rem; opacity: 0.8; margin-top: -2px;">남은자리 ${remainCount}</div>`;
-            
+
             if (isPast) {
                 btnClass = 'btn-outline-secondary opacity-50 bg-light';
                 disabledAttr = 'disabled';
@@ -440,9 +464,9 @@ window.updateAvailableTimesGrid = function(type) {
     }
 }
 
-window.selectTime = function(type, slot, btnEl) {
+window.selectTime = function (type, slot, btnEl) {
     const input = document.getElementById(type + '_reservation_time');
-    if(input) input.value = slot;
+    if (input) input.value = slot;
     const btns = document.querySelectorAll('.time-btn-' + type);
     btns.forEach(b => {
         if (!b.hasAttribute('disabled')) {
@@ -457,10 +481,10 @@ window.selectTime = function(type, slot, btnEl) {
 }
 
 // [브릿지 스크립트 분리] 
-window.triggerServiceDetailModal = function(itemId) {
+window.triggerServiceDetailModal = function (itemId) {
     const cfg = getShopConfig();
     if (!cfg || !cfg.allItemsData) return;
-    
+
     let item = cfg.allItemsData.find(i => parseInt(i.id) === parseInt(itemId));
     if (item) {
         let renderItem = JSON.parse(JSON.stringify(item));
@@ -477,7 +501,7 @@ window.triggerServiceDetailModal = function(itemId) {
     }
 }
 
-window.openMenuDetailModal = function(item) {
+window.openMenuDetailModal = function (item) {
     const cfg = getShopConfig();
     const modalEl = document.getElementById('menuDetailModal');
     if (!modalEl || !cfg) return;
@@ -576,7 +600,7 @@ window.openMenuDetailModal = function(item) {
     if (photoUrls.length > 0) bootstrap.Tab.getOrCreateInstance(photoTabBtn).show();
     else if (videoUrls.length > 0) bootstrap.Tab.getOrCreateInstance(videoTabBtn).show();
 
-    const onModalShown = function() {
+    const onModalShown = function () {
         if (photoUrls.length > 0 && typeof initDynamicCarousel === 'function') initDynamicCarousel(photoCarouselId, { useLightbox: true });
         if (videoUrls.length > 0 && typeof initDynamicCarousel === 'function') initDynamicCarousel(videoCarouselId);
         modalEl.removeEventListener('shown.bs.modal', onModalShown);
@@ -603,17 +627,17 @@ window.openMenuDetailModal = function(item) {
     }
     window.updateWishlistButton(item.id);
 
-    if(typeof showBsModal === 'function') showBsModal('menuDetailModal');
+    if (typeof showBsModal === 'function') showBsModal('menuDetailModal');
 }
 
-window.updateWishlistUI = function() {
+window.updateWishlistUI = function () {
     const count = wishlist.length;
     const badge = document.getElementById('cart-count-badge');
-    if(badge) badge.innerText = count;
+    if (badge) badge.innerText = count;
 
     const btnOrderCol = document.getElementById('btn-order-col');
     const btnHistoryCol = document.getElementById('btn-history-col');
-    if(!btnOrderCol || !btnHistoryCol) return;
+    if (!btnOrderCol || !btnHistoryCol) return;
 
     if (count > 0) {
         btnOrderCol.style.display = 'block';
@@ -637,7 +661,7 @@ window.updateWishlistUI = function() {
     });
 }
 
-window.toggleWishlist = function(btnEl) {
+window.toggleWishlist = function (btnEl) {
     const cfg = getShopConfig();
     const btn = btnEl || document.getElementById('btn-wishlist');
     if (!btn || !cfg) return;
@@ -686,7 +710,7 @@ window.toggleWishlist = function(btnEl) {
     }
 }
 
-window.updateWishlistButton = function(itemId) {
+window.updateWishlistButton = function (itemId) {
     const btn = document.getElementById('btn-wishlist');
     if (!btn) return;
 
@@ -699,8 +723,8 @@ window.updateWishlistButton = function(itemId) {
     }
 
     // 0이면 d-none 클래스로 숫자를 숨기고, 1 이상이면 노출
-    const countHtml = currentCount > 0 
-        ? `<span id="detail-wish-count" class="fw-bold ms-1" style="font-size: 0.95rem;">${currentCount}</span>` 
+    const countHtml = currentCount > 0
+        ? `<span id="detail-wish-count" class="fw-bold ms-1" style="font-size: 0.95rem;">${currentCount}</span>`
         : `<span id="detail-wish-count" class="fw-bold ms-1 d-none" style="font-size: 0.95rem;">0</span>`;
 
     const isWished = wishlist.some(w => parseInt(w.id) === parseInt(itemId));
@@ -715,11 +739,11 @@ window.updateWishlistButton = function(itemId) {
 }
 
 
-window.showCartViewModal = function() {
+window.showCartViewModal = function () {
     const cfg = getShopConfig();
     const listContainer = document.getElementById('cart-view-items-list');
-    if(!listContainer || !cfg) return;
-    
+    if (!listContainer || !cfg) return;
+
     let html = '';
     let total = 0;
 
@@ -766,23 +790,23 @@ window.showCartViewModal = function() {
         if (savedPhone) phoneInput.value = savedPhone;
     }
 
-    if(typeof showBsModal === 'function') showBsModal('cartViewModal');
+    if (typeof showBsModal === 'function') showBsModal('cartViewModal');
 }
 
-window.removeFromWishlist = function(index) {
+window.removeFromWishlist = function (index) {
     const cfg = getShopConfig();
     wishlist.splice(index, 1);
-    if(cfg) localStorage.setItem('wishlist_' + cfg.shopId, JSON.stringify(wishlist));
+    if (cfg) localStorage.setItem('wishlist_' + cfg.shopId, JSON.stringify(wishlist));
     window.updateWishlistUI();
     window.showCartViewModal();
 }
 
-window.confirmDeleteInquiry = function(inquiryId) {
+window.confirmDeleteInquiry = function (inquiryId) {
     inquiryToDelete = inquiryId;
-    if(typeof showBsModal === 'function') showBsModal('deleteOrderConfirmModal');
+    if (typeof showBsModal === 'function') showBsModal('deleteOrderConfirmModal');
 }
 
-window.executeDeleteInquiry = async function() {
+window.executeDeleteInquiry = async function () {
     const cfg = getShopConfig();
     if (!inquiryToDelete || !cfg) return;
 
@@ -801,10 +825,10 @@ window.executeDeleteInquiry = async function() {
         const result = await response.json();
 
         if (result.status === 'success') {
-            if(typeof hideBsModal === 'function') hideBsModal('deleteOrderConfirmModal');
+            if (typeof hideBsModal === 'function') hideBsModal('deleteOrderConfirmModal');
 
             if (typeof showToast === 'function') showToast('삭제되었습니다.', 'success');
-            window.fetchServiceInquiryHistory(phone); 
+            window.fetchServiceInquiryHistory(phone);
 
             const badge = document.getElementById('order-count-badge');
             if (badge && parseInt(badge.innerText) > 0) badge.innerText = parseInt(badge.innerText) - 1;
@@ -820,12 +844,12 @@ window.executeDeleteInquiry = async function() {
     }
 }
 
-window.confirmCancelInquiry = function(inquiryId) {
+window.confirmCancelInquiry = function (inquiryId) {
     inquiryToCancel = inquiryId;
-    if(typeof showBsModal === 'function') showBsModal('cancelInquiryConfirmModal');
+    if (typeof showBsModal === 'function') showBsModal('cancelInquiryConfirmModal');
 }
 
-window.executeCancelInquiry = async function() {
+window.executeCancelInquiry = async function () {
     const cfg = getShopConfig();
     if (!inquiryToCancel || !cfg) return;
 
@@ -844,10 +868,10 @@ window.executeCancelInquiry = async function() {
         const result = await response.json();
 
         if (result.status === 'success') {
-            if(typeof hideBsModal === 'function') hideBsModal('cancelInquiryConfirmModal');
+            if (typeof hideBsModal === 'function') hideBsModal('cancelInquiryConfirmModal');
 
             if (typeof showToast === 'function') showToast('취소되었습니다.', 'success');
-            window.fetchServiceInquiryHistory(phone); 
+            window.fetchServiceInquiryHistory(phone);
         } else {
             alert(result.message || '취소에 실패했습니다.');
         }
@@ -858,13 +882,13 @@ window.executeCancelInquiry = async function() {
     }
 }
 
-window.fetchServiceInquiryHistory = async function(phoneRaw) {
+window.fetchServiceInquiryHistory = async function (phoneRaw) {
     const cfg = getShopConfig();
-    if(!cfg) return;
+    if (!cfg) return;
     const phone = phoneRaw.replace(/\D/g, '');
     if (!phone) return;
 
-    if(typeof showBsModal === 'function') showBsModal('serviceInquiryHistoryModal');
+    if (typeof showBsModal === 'function') showBsModal('serviceInquiryHistoryModal');
 
     const historyForm = document.getElementById('service-non-member-history-form');
     const infoForm = document.getElementById('service-member-history-info');
@@ -889,7 +913,7 @@ window.fetchServiceInquiryHistory = async function(phoneRaw) {
     }
 }
 
-window.submitServiceHistorySearch = function() {
+window.submitServiceHistorySearch = function () {
     const cfg = getShopConfig();
     const phoneInput = document.getElementById('service_history_search_phone');
     if (phoneInput && phoneInput.value.trim() !== '') {
@@ -913,54 +937,36 @@ window.submitServiceHistorySearch = function() {
     }
 };
 
-window.continueWithoutLogin = function() {
-    window.hasConfirmedLoginChoice = true;
-    if(typeof hideBsModal === 'function') hideBsModal('loginChoiceModal');
-
-    if (pendingSrvAction === 'submitOrder') {
-        setTimeout(() => { window.submitOrder(); }, 300);
-    } else if (pendingSrvAction === 'submitSingleInquiry') {
-        setTimeout(() => { window.submitSingleInquiry(); }, 300);
-    } else if (pendingSrvAction === 'viewHistory') {
-        const historyForm = document.getElementById('service-non-member-history-form');
-        const infoForm = document.getElementById('service-member-history-info');
-
-        if (historyForm) historyForm.style.display = 'block';
-        if (infoForm) infoForm.style.display = 'none';
-
-        const phoneInput = document.getElementById('service_history_search_phone');
-        if (phoneInput) {
-            const savedPhone = localStorage.getItem('srv_last_search_phone');
-            phoneInput.value = savedPhone ? savedPhone : '';
-        }
-
-        const resultsContainer = document.getElementById('service-history-results');
-        if (resultsContainer) resultsContainer.innerHTML = '<div class="text-center py-5 text-muted">전화번호를 입력하고 조회 버튼을 눌러주세요.</div>';
-
-        if(typeof showBsModal === 'function') showBsModal('serviceInquiryHistoryModal');
-        pendingSrvAction = null;
-    }
-};
-
-window.openServiceInquiryHistoryModal = function() {
+window.openServiceInquiryHistoryModal = function () {
     const cfg = getShopConfig();
-    if(!cfg) return;
+    if (!cfg) return;
 
     if (!cfg.isCustomerLoggedIn) {
-        pendingSrvAction = 'viewHistory';
+        window.pendingActionWithoutLogin = function () {
+            window.hasConfirmedLoginChoice = true;
+
+            // 브라우저에 저장된 전화번호가 있는지 확인
+            const savedPhone = localStorage.getItem('srv_last_search_phone') || localStorage.getItem('ps24_guest_phone');
+            if (savedPhone) {
+                window.fetchServiceInquiryHistory(savedPhone);
+            } else {
+                window.pendingPhInfoAction = 'srv_history';
+                if (typeof showBsModal === 'function') showBsModal('phInfoModal');
+            }
+        };
         sessionStorage.setItem('postLoginAction', 'srv_history');
-        if(typeof showBsModal === 'function') showBsModal('loginChoiceModal');
+        if (typeof showBsModal === 'function') showBsModal('loginChoiceModal');
     } else {
         if (!cfg.customerPhone) {
-            window.loginChoiceContext = 'srv_history';
-            if(typeof showBsModal === 'function') showBsModal('phInfoModal');
+            window.pendingPhInfoAction = 'srv_history';
+            if (typeof showBsModal === 'function') showBsModal('phInfoModal');
         } else {
             window.fetchServiceInquiryHistory(cfg.customerPhone);
         }
     }
 };
 
-window.autoSubmitServiceCartInquiry = function() {
+window.autoSubmitServiceCartInquiry = function () {
     const savedPhone = sessionStorage.getItem('temp_srv_phone');
     const savedInquiry = sessionStorage.getItem('temp_srv_inquiry');
     if (savedPhone !== null) {
@@ -977,7 +983,7 @@ window.autoSubmitServiceCartInquiry = function() {
     window.submitOrder();
 };
 
-window.autoSubmitServiceSingleInquiry = function() {
+window.autoSubmitServiceSingleInquiry = function () {
     const savedPhone = sessionStorage.getItem('temp_srv_single_phone');
     const savedInquiry = sessionStorage.getItem('temp_srv_single_inquiry');
     const savedItem = sessionStorage.getItem('temp_srv_single_item');
@@ -1003,7 +1009,7 @@ window.autoSubmitServiceSingleInquiry = function() {
     window.submitSingleInquiry();
 };
 
-window.submitOrder = async function() {
+window.submitOrder = async function () {
     if (typeof validateRequiredFields === 'function' && !validateRequiredFields('orderForm')) {
         if (typeof showToast === 'function') showToast('필수 입력 정보(연락처, 문의 사항)를 모두 입력해주세요.', 'danger');
         else alert('필수 입력 정보를 모두 입력해주세요.');
@@ -1014,7 +1020,7 @@ window.submitOrder = async function() {
     if (!cfg) return;
 
     const phoneInput = document.getElementById('customer_phone');
-    const phoneDigits = phoneInput.value.replace(/\D/g, ''); 
+    const phoneDigits = phoneInput.value.replace(/\D/g, '');
     const inquiryInput = document.getElementById('customer_inquiry');
 
     const resDate = document.getElementById('cart_reservation_date').value;
@@ -1024,17 +1030,20 @@ window.submitOrder = async function() {
     if (!resDate || !resTime) return alert('예약 희망일과 시간을 선택해주세요.');
 
     if (!cfg.isCustomerLoggedIn && !window.hasConfirmedLoginChoice) {
-        pendingSrvAction = 'submitOrder';
-        sessionStorage.setItem('postLoginAction', 'srv_cart_inquiry_auto_submit'); 
+        window.pendingActionWithoutLogin = function () {
+            window.hasConfirmedLoginChoice = true;
+            window.submitOrder();
+        };
+        sessionStorage.setItem('postLoginAction', 'srv_cart_inquiry_auto_submit');
 
         sessionStorage.setItem('temp_srv_phone', phoneInput ? phoneInput.value : '');
         sessionStorage.setItem('temp_srv_inquiry', inquiryInput ? inquiryInput.value : '');
 
-        if(typeof hideBsModal === 'function') hideBsModal('cartViewModal');
+        if (typeof hideBsModal === 'function') hideBsModal('cartViewModal');
 
         setTimeout(() => {
-            if(typeof showBsModal === 'function') showBsModal('loginChoiceModal');
-        }, 150); 
+            if (typeof showBsModal === 'function') showBsModal('loginChoiceModal');
+        }, 150);
         return;
     }
 
@@ -1053,7 +1062,7 @@ window.submitOrder = async function() {
     formData.append('shop_id', cfg.shopId);
     formData.append('customer_phone', phoneDigits);
     formData.append('customer_inquiry', finalInquiry);
-    formData.append('inquiry_data', JSON.stringify(cartData)); 
+    formData.append('inquiry_data', JSON.stringify(cartData));
     formData.append('reservation_date', resDate);
     formData.append('reservation_time', resTime);
 
@@ -1070,7 +1079,7 @@ window.submitOrder = async function() {
                 if (!cfg.myReservations[resDate]) cfg.myReservations[resDate] = [];
                 const itemNames = wishlist.map(i => i.item_name).join(', ');
                 cfg.myReservations[resDate].push({ time: resTime, items: itemNames || '서비스' });
-                
+
                 if (!cfg.bookedSlots[resDate]) cfg.bookedSlots[resDate] = {};
                 if (!cfg.bookedSlots[resDate][resTime]) cfg.bookedSlots[resDate][resTime] = 0;
                 cfg.bookedSlots[resDate][resTime]++;
@@ -1084,7 +1093,7 @@ window.submitOrder = async function() {
 
             if (inquiryInput) inquiryInput.value = '';
 
-            if(typeof hideBsModal === 'function') hideBsModal('cartViewModal');
+            if (typeof hideBsModal === 'function') hideBsModal('cartViewModal');
 
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
@@ -1099,7 +1108,7 @@ window.submitOrder = async function() {
             setTimeout(() => {
                 const phoneDisplay = document.getElementById('success_registered_phone');
                 if (phoneDisplay) phoneDisplay.innerText = phoneInput ? phoneInput.value : '';
-                if(typeof showBsModal === 'function') showBsModal('inquirySuccessModal');
+                if (typeof showBsModal === 'function') showBsModal('inquirySuccessModal');
             }, 150);
         } else {
             alert('접수 실패: ' + result.message);
@@ -1112,7 +1121,7 @@ window.submitOrder = async function() {
     }
 };
 
-window.submitSingleInquiry = async function() {
+window.submitSingleInquiry = async function () {
     if (typeof validateRequiredFields === 'function' && !validateRequiredFields('singleInquiryForm')) {
         if (typeof showToast === 'function') showToast('필수 입력 정보(연락처, 문의 사항)를 모두 입력해주세요.', 'danger');
         else alert('필수 입력 정보를 모두 입력해주세요.');
@@ -1120,7 +1129,7 @@ window.submitSingleInquiry = async function() {
     }
 
     const cfg = getShopConfig();
-    if(!cfg) return;
+    if (!cfg) return;
 
     const phoneInput = document.getElementById('single_customer_phone');
     const phoneDigits = phoneInput.value.replace(/\D/g, '');
@@ -1135,17 +1144,20 @@ window.submitSingleInquiry = async function() {
     const item = JSON.parse(itemDataInput.value);
 
     if (!cfg.isCustomerLoggedIn && !window.hasConfirmedLoginChoice) {
-        pendingSrvAction = 'submitSingleInquiry';
-        sessionStorage.setItem('postLoginAction', 'srv_single_inquiry_auto_submit'); 
+        window.pendingActionWithoutLogin = function () {
+            window.hasConfirmedLoginChoice = true;
+            window.submitSingleInquiry();
+        };
+        sessionStorage.setItem('postLoginAction', 'srv_single_inquiry_auto_submit');
 
         sessionStorage.setItem('temp_srv_single_phone', phoneInput ? phoneInput.value : '');
         sessionStorage.setItem('temp_srv_single_inquiry', inquiryInput ? inquiryInput.value : '');
         sessionStorage.setItem('temp_srv_single_item', itemDataInput ? itemDataInput.value : '');
 
-        if(typeof hideBsModal === 'function') hideBsModal('menuDetailModal');
+        if (typeof hideBsModal === 'function') hideBsModal('menuDetailModal');
 
         setTimeout(() => {
-            if(typeof showBsModal === 'function') showBsModal('loginChoiceModal');
+            if (typeof showBsModal === 'function') showBsModal('loginChoiceModal');
         }, 150);
         return;
     }
@@ -1181,7 +1193,7 @@ window.submitSingleInquiry = async function() {
             if (cfg.myReservations) {
                 if (!cfg.myReservations[resDate]) cfg.myReservations[resDate] = [];
                 cfg.myReservations[resDate].push({ time: resTime, items: item.item_name || '서비스' });
-                
+
                 if (!cfg.bookedSlots[resDate]) cfg.bookedSlots[resDate] = {};
                 if (!cfg.bookedSlots[resDate][resTime]) cfg.bookedSlots[resDate][resTime] = 0;
                 cfg.bookedSlots[resDate][resTime]++;
@@ -1189,9 +1201,9 @@ window.submitSingleInquiry = async function() {
 
             if (phoneInput) localStorage.setItem('srv_last_search_phone', phoneInput.value);
 
-            inquiryInput.value = ''; 
+            inquiryInput.value = '';
 
-            if(typeof hideBsModal === 'function') hideBsModal('menuDetailModal');
+            if (typeof hideBsModal === 'function') hideBsModal('menuDetailModal');
 
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
@@ -1206,7 +1218,7 @@ window.submitSingleInquiry = async function() {
             setTimeout(() => {
                 const phoneDisplay = document.getElementById('success_registered_phone');
                 if (phoneDisplay) phoneDisplay.innerText = phoneInput ? phoneInput.value : '';
-                if(typeof showBsModal === 'function') showBsModal('inquirySuccessModal');
+                if (typeof showBsModal === 'function') showBsModal('inquirySuccessModal');
             }, 150);
         } else {
             alert('접수 실패: ' + result.message);

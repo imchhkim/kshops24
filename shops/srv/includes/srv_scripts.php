@@ -56,4 +56,30 @@ if (isset($pdo) && isset($shop['id'])) {
         langWishlistAdded: "<?php echo addslashes(__('관심 서비스에 추가되었습니다.')); ?>",
         langEnterPhoneToSearch: "<?php echo addslashes(__('전화번호를 입력하고 조회 버튼을 눌러주세요.')); ?>"
     };
+
+    /**
+     * [신규] '나의 예약' 버튼 클릭 시 실행되는 분기 함수
+     * - 고객 전화번호가 세션/쿠키에 있으면 바로 '나의 예약 내역' 모달을 엽니다.
+     * - 없으면 '로그인 방법 선택' 모달을 먼저 띄웁니다.
+     */
+    function checkAndOpenHistoryModal() {
+        if (PS24_SHOP_CONFIG.customerPhone && PS24_SHOP_CONFIG.customerPhone.trim() !== '') {
+            openServiceInquiryHistoryModal();
+        } else {
+            const loginModal = document.getElementById('loginChoiceModal');
+            if (loginModal) {
+                bootstrap.Modal.getOrCreateInstance(loginModal).show();
+            }
+        }
+    }
+
+    /**
+     * [신규] '로그인 없이 계속하기' 버튼 클릭 시 실행되는 함수
+     * 로그인 선택 모달을 닫고, 비회원 상태로 '나의 예약 내역' 모달을 엽니다.
+     */
+    function continueWithoutLogin() {
+        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginChoiceModal'));
+        if (loginModal) loginModal.hide();
+        openServiceInquiryHistoryModal();
+    }
 </script>
