@@ -483,24 +483,10 @@ while ($current <= $end) {
 }
 $week_map = ['일', '월', '화', '수', '목', '금', '토'];
 ?>
-<style>
-    /* 가로 스크롤바 표시 및 스타일링 */
-    #weekCalendar::-webkit-scrollbar { 
-        height: 6px; 
-    }
-    #weekCalendar::-webkit-scrollbar-track { 
-        background: #f8f9fa; 
-        border-radius: 10px;
-    }
-    #weekCalendar::-webkit-scrollbar-thumb { 
-        background: #ced4da; 
-        border-radius: 10px;
-    }
-</style>
 
 <!-- 달력 영역 -->
 <div class="mb-3 position-relative">
-    <div class="d-flex overflow-auto gap-2 pb-2 px-1" id="weekCalendar" style="-webkit-overflow-scrolling: touch;">
+    <div class="d-flex flex-wrap gap-2 pb-2 px-1 justify-content-center" id="weekCalendar">
         <a href="?pg=manage_shop_reservations&status=<?php echo htmlspecialchars($current_status); ?>&month=<?php echo urlencode($target_month); ?>&date=" class="btn <?php echo $target_date === '' ? 'btn-dark shadow' : 'btn-white bg-white border shadow-sm text-dark'; ?> d-flex flex-column align-items-center justify-content-center flex-shrink-0 rounded-4 transition-all" style="width: 60px; height: 75px;">
             <span class="small mb-1">전체</span>
             <span class="fw-bold fs-5">All</span>
@@ -650,7 +636,7 @@ $week_map = ['일', '월', '화', '수', '목', '금', '토'];
                     <div class="card-header bg-white border-bottom pt-3 pb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center rounded-top-4 gap-3">
 
                         <!-- [모바일 1번째 줄 / PC 좌측] 정보 영역 -->
-                        <div class="d-flex align-items-center justify-content-between w-100 w-md-auto gap-2">
+                        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center w-100 w-md-auto gap-1 gap-md-2">
                             <div class="d-flex align-items-center gap-2">
                                 <!-- 순차적 목록 번호 -->
                                 <span class="fw-bold text-secondary fs-5">#<?php echo $list_num++; ?></span>
@@ -659,8 +645,8 @@ $week_map = ['일', '월', '화', '수', '목', '금', '토'];
                                     <i class="bi <?php echo $status['icon']; ?> me-1"></i><?php echo $status['label']; ?>
                                 </span>
                             </div>
-                            <!-- 접수일시 (공용, 모바일 우측 정렬) -->
-                            <small class="text-muted fw-medium text-nowrap ms-2">
+                            <!-- 접수일시 (공용, 모바일 좌측 하단) -->
+                            <small class="text-muted fw-medium text-nowrap ms-0 ms-md-2 mt-1 mt-md-0">
                                 <i class="bi bi-clock me-1"></i>접수일시: <?php echo $date; ?>
                             </small>
                         </div>
@@ -817,7 +803,7 @@ $week_map = ['일', '월', '화', '수', '목', '금', '토'];
                             foreach ($h_list as $h_date => $h_memo): ?>
                                 <li class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 border-bottom">
                                     <span class="fw-bold text-dark"><i class="bi bi-calendar-event me-2 text-danger"></i><?php echo $h_date; ?> <small class="text-muted ms-2">(<?php echo htmlspecialchars($h_memo); ?>)</small></span>
-                                    <button class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill fw-bold" onclick="manageHoliday('remove', '<?php echo $h_date; ?>')">해제</button>
+                                    <button class="btn btn-sm btn-outline-danger py-1 px-3 rounded-pill fw-bold" onclick="manageHoliday('remove', '<?php echo $h_date; ?>')">삭제</button>
                                 </li>
                             <?php endforeach; ?>
                         <?php endif; ?>

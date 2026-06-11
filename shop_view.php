@@ -146,17 +146,10 @@ if (file_exists($category_config_path)) {
 // 7. [UI 설정] 점주가 관리자 페이지에서 설정한 맞춤형 레이블(JSON) 디코딩
 $ui = json_decode($shop['ui_settings'] ?? '{}', true);
 
-// [추가] 통화 기호 설정
-$shop_currency = $shop['shop_currency'] ?? 'PHP';
-$currency_symbols = [
-    'PHP' => '₱',
-    'KRW' => '₩',
-    'USD' => '$',
-    'JPY' => '¥',
-    'CNY' => '¥',
-    'VND' => '₫'
-];
-$currency_symbol = $currency_symbols[$shop_currency] ?? '₱';
+// [추가] 전역 통화 기호 설정 (이 변수는 include 되는 하위의 모든 파일에서 공통으로 재사용됩니다.)
+$shop_country = strtoupper($ui['country'] ?? 'PH');
+global $global_country_config;
+$currency_symbol = isset($global_country_config[$shop_country]['symbol']) ? $global_country_config[$shop_country]['symbol'] : '₱';
 
 $is_testing_mode = ($shop['status'] === 'testing');
 
@@ -759,16 +752,6 @@ $fnb_js_ver = file_exists($_SERVER['DOCUMENT_ROOT'] . $fnb_js_path) ? filemtime(
                 <!-- 언어 선택 드롭다운 -->
                 <?php if (($ui['is_multilingual'] ?? 0) == 1): ?>
                     <?php
-                    $supported_langs_name = [
-                        'ko' => '한',
-                        'en' => 'En',
-                        'zh' => '中',
-                        'ja' => '日',
-                        'es' => 'Esp',
-                        'fr' => 'Fr',
-                        'ru' => 'Ру',
-                        'vi' => 'Vi'
-                    ];
                     $active_langs = ['ko' => '한'];
                     for ($i = 1; $i <= 2; $i++) {
                         $lang = $ui["multilingual_lang{$i}"] ?? 'none';
@@ -778,7 +761,7 @@ $fnb_js_ver = file_exists($_SERVER['DOCUMENT_ROOT'] . $fnb_js_path) ? filemtime(
                                 if (empty($code)) $code = "etc{$i}";
                                 $active_langs[$code] = trim($ui["multilingual_lang{$i}_custom_name"] ?? 'Other');
                             } else {
-                                $active_langs[$lang] = $supported_langs_name[$lang] ?? strtoupper($lang);
+                                $active_langs[$lang] = SUPPORTED_LANGUAGES_SHORT[$lang] ?? strtoupper($lang);
                             }
                         }
                     }

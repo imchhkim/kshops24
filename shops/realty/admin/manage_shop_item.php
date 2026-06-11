@@ -69,6 +69,20 @@ if (isset($grouped_items['기타'])) {
     unset($grouped_items['기타']);
     $grouped_items['기타'] = $temp_unassigned;
 }
+
+// 상점 환경 설정(UI 설정)에 기반한 국가별 통화 기호 동적 설정
+$shop_country = strtoupper($ui['country'] ?? 'PH');
+global $global_country_config;
+$currency_symbol = isset($global_country_config[$shop_country]['symbol']) ? $global_country_config[$shop_country]['symbol'] : '₱';
+
+// [다국어] 전역 언어 코드 파싱 (하위 모달 및 반복문에서 공통 재사용)
+$lang1 = $ui['multilingual_lang1'] ?? 'none';
+$lang1_code = $lang1 === 'etc' ? strtolower(trim($ui['multilingual_lang1_custom_code'] ?? 'etc1')) : $lang1;
+if (empty($lang1_code)) $lang1_code = 'etc1';
+
+$lang2 = $ui['multilingual_lang2'] ?? 'none';
+$lang2_code = $lang2 === 'etc' ? strtolower(trim($ui['multilingual_lang2_custom_code'] ?? 'etc2')) : $lang2;
+if (empty($lang2_code)) $lang2_code = 'etc2';
 ?>
 
 <style>
@@ -271,15 +285,6 @@ if (isset($grouped_items['기타'])) {
                     ?>
 
                     <div class="list-group list-group-flush border-top" id="item-list-sortable">
-                        <?php
-                        $lang1 = $ui['multilingual_lang1'] ?? 'none';
-                        $lang1_code = $lang1 === 'etc' ? strtolower(trim($ui['multilingual_lang1_custom_code'] ?? 'etc1')) : $lang1;
-                        if (empty($lang1_code)) $lang1_code = 'etc1';
-
-                        $lang2 = $ui['multilingual_lang2'] ?? 'none';
-                        $lang2_code = $lang2 === 'etc' ? strtolower(trim($ui['multilingual_lang2_custom_code'] ?? 'etc2')) : $lang2;
-                        if (empty($lang2_code)) $lang2_code = 'etc2';
-                        ?>
                         <?php if (empty($grouped_items)): ?>
                             <div class="list-group-item text-center py-5 text-muted border-bottom">등록된 매물이 없습니다.</div>
                         <?php else: ?>
@@ -371,10 +376,10 @@ if (isset($grouped_items['기타'])) {
                                                 <div class="d-flex flex-row flex-md-column justify-content-between align-items-center align-items-md-end gap-2 gap-md-1 w-100 w-md-auto mb-2 mb-md-0">
                                                     <div class="fw-bold text-primary">
                                                         <?php if (!empty($m['item_discount_rate']) && $m['item_discount_rate'] > 0): ?>
-                                                            <?php echo number_format((float)($m['item_discount_price'] ?? 0)); ?> ₱
+                                                    <?php echo $currency_symbol; ?> <?php echo number_format((float)($m['item_discount_price'] ?? 0)); ?>
                                                             <span class="text-danger small fw-normal ms-1">(<?php echo $m['item_discount_rate']; ?>% 급매)</span>
                                                         <?php else: ?>
-                                                            <?php echo number_format((float)($m['item_price'] ?? 0)); ?> ₱
+                                                    <?php echo $currency_symbol; ?> <?php echo number_format((float)($m['item_price'] ?? 0)); ?>
                                                         <?php endif; ?>
                                                     </div>
                                                     <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -512,11 +517,11 @@ if (isset($grouped_items['기타'])) {
         const discountPrice = parseInt(previewItem.item_discount_price) || 0;
 
         if (discountRate > 0) {
-            finalPrice.innerText = '₱ ' + discountPrice.toLocaleString();
-            origPrice.innerText = '₱ ' + price.toLocaleString();
+            finalPrice.innerText = '<?php echo $currency_symbol; ?> ' + discountPrice.toLocaleString();
+            origPrice.innerText = '<?php echo $currency_symbol; ?> ' + price.toLocaleString();
             origPrice.classList.remove('d-none');
         } else {
-            finalPrice.innerText = '₱ ' + price.toLocaleString();
+            finalPrice.innerText = '<?php echo $currency_symbol; ?> ' + price.toLocaleString();
             origPrice.classList.add('d-none');
         }
 

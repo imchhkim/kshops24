@@ -511,17 +511,33 @@ window.openMenuDetailModal = function (item) {
 
     const finalPrice = document.getElementById('detail-final-price');
     const origPrice = document.getElementById('detail-original-price');
+    const textPriceEl = document.getElementById('detail-text-price');
+    const numPriceWrap = document.getElementById('detail-number-price-wrap');
+
     const price = parseInt(item.item_price) || 0;
     const discountRate = parseInt(item.item_discount_rate) || 0;
     const discountPrice = parseInt(item.item_discount_price) || 0;
 
-    if (discountRate > 0) {
-        finalPrice.innerText = cfg.currencySymbol + ' ' + discountPrice.toLocaleString();
-        origPrice.innerText = cfg.currencySymbol + ' ' + price.toLocaleString();
-        origPrice.classList.remove('d-none');
+    if (item.price_description && item.price_description.trim() !== '') {
+        if (textPriceEl) {
+            textPriceEl.innerHTML = item.price_description.replace(/\n/g, '<br>');
+            textPriceEl.classList.remove('d-none');
+        }
+        if (numPriceWrap) numPriceWrap.classList.add('d-none');
     } else {
-        finalPrice.innerText = cfg.currencySymbol + ' ' + price.toLocaleString();
-        origPrice.classList.add('d-none');
+        if (textPriceEl) textPriceEl.classList.add('d-none');
+        if (numPriceWrap) numPriceWrap.classList.remove('d-none');
+
+        if (discountRate > 0) {
+            if (finalPrice) finalPrice.innerText = cfg.currencySymbol + ' ' + discountPrice.toLocaleString();
+            if (origPrice) {
+                origPrice.innerText = cfg.currencySymbol + ' ' + price.toLocaleString();
+                origPrice.classList.remove('d-none');
+            }
+        } else {
+            if (finalPrice) finalPrice.innerText = cfg.currencySymbol + ' ' + price.toLocaleString();
+            if (origPrice) origPrice.classList.add('d-none');
+        }
     }
 
     const badgesContainer = document.getElementById('detail-badges');

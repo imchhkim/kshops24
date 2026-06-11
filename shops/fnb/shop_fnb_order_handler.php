@@ -179,15 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $ui = json_decode($shop_info['ui_settings'] ?? '{}', true);
                     $shop_currency = $ui['currency'] ?? 'PHP';
-                    $currency_symbols = [
-                        'PHP' => '₱',
-                        'KRW' => '₩',
-                        'USD' => '$',
-                        'JPY' => '¥',
-                        'CNY' => '¥',
-                        'VND' => '₫'
-                    ];
-                    $currency_symbol = $currency_symbols[$shop_currency] ?? '₱';
+                    $currency_symbol = defined('CURRENCY_SYMBOLS') ? (CURRENCY_SYMBOLS[$shop_currency] ?? '₱') : '₱';
 
                     // 주문 상세 메뉴 문자열 구성
                     $item_details = "";

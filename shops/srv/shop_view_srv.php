@@ -7,6 +7,9 @@
 
 if (!isset($shop)) exit;
 
+// 통화 기호 설정은 부모 파일(shop_view.php)에서 일괄 선언된 $currency_symbol을 상속받아 사용합니다.
+// 이로써 중복 코드를 제거하고 모든 카테고리가 일관된 통화 설정을 따릅니다.
+
 // ==========================================================
 // 1. 데이터 로드 섹션.
 // ==========================================================
@@ -176,13 +179,19 @@ if (!function_exists('renderServiceItem')) {
                     <div class="menu-item-name"><?php echo htmlspecialchars($disp_item_name); ?></div>
                     <div class="menu-item-info"><?php echo !empty($disp_item_info) ? nl2br(htmlspecialchars($disp_item_info)) : '&nbsp;'; ?></div>
 
-                    <div class="menu-item-price d-flex flex-column align-items-center mt-2">
+                    <div class="menu-item-price d-flex flex-column align-items-center mt-2 mb-3">
                         <div class="text-center">
                             <?php if ($soldout): ?>
-                                <span class="price-strike"><?php echo $currency_symbol; ?> <?php echo number_format((float)($item['item_price'] ?? 0)); ?></span>
+                                <?php if (!empty($item['price_description'])): ?>
+                                    <span class="price-strike small"><?php echo nl2br(htmlspecialchars($item['price_description'])); ?></span>
+                                <?php else: ?>
+                                    <span class="price-strike"><?php echo $currency_symbol; ?> <?php echo number_format((float)($item['item_price'] ?? 0)); ?></span>
+                                <?php endif; ?>
                                 <div class="text-danger small fw-bold"><?php echo __('예약마감'); ?></div>
                             <?php else: ?>
-                                <?php if ($has_discount): ?>
+                                <?php if (!empty($item['price_description'])): ?>
+                                    <span class="text-dark fw-bold" style="font-size: 0.95rem; white-space: pre-wrap;"><?php echo nl2br(htmlspecialchars($item['price_description'])); ?></span>
+                                <?php elseif ($has_discount): ?>
                                     <div class="d-flex align-items-center justify-content-center gap-1">
                                         <span class="price-strike x-small text-muted mb-0"><?php echo $currency_symbol; ?> <?php echo number_format((float)($item['item_price'] ?? 0)); ?></span>
                                         <span class="text-primary fw-bold"><?php echo $currency_symbol; ?> <?php echo number_format((float)($item['item_discount_price'] ?? 0)); ?></span>
@@ -192,12 +201,14 @@ if (!function_exists('renderServiceItem')) {
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
+
                         <?php if (!$soldout): ?>
                             <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 mt-3 w-100 shadow-sm"
                                 onclick="event.stopPropagation(); triggerServiceDetailModal(<?php echo (int)$item['id']; ?>)">
                                 <i class="bi bi-card-list me-1"></i> <?php echo __('상세 보기'); ?>
                             </button>
                         <?php endif; ?>
+
                     </div>
                 </div>
             </div>

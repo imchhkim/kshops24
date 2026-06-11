@@ -27,8 +27,8 @@
                         <div id="detail-badges"></div>
                     </div>
                     <div class="price-area mb-3">
-                        <span class="fs-4 fw-bold text-primary" id="detail-final-price">₱ 0</span>
-                        <span class="text-muted text-decoration-line-through small ms-2 d-none" id="detail-original-price">₱ 0</span>
+                        <span class="fs-4 fw-bold text-primary" id="detail-final-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
+                        <span class="text-muted text-decoration-line-through small ms-2 d-none" id="detail-original-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                     <p class="text-secondary small mb-4" id="detail-menu-info" style="line-height: 1.6;">상세 설명이 들어갑니다.</p>
                 </div>
@@ -47,7 +47,7 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-10">
                         <span class="fw-bold"><?php echo __('총 합계'); ?></span>
-                        <span class="fw-bold text-primary fs-5" id="detail-subtotal">₱ 0</span>
+                        <span class="fw-bold text-primary fs-5" id="detail-subtotal"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -79,7 +79,7 @@
             <div class="modal-body p-4">
                 <div class="text-center mb-4">
                     <h4 class="fw-bold mb-1" id="qty-menu-name">메뉴명</h4>
-                    <p class="text-primary fs-5 fw-bold" id="qty-menu-price">₱ 0</p>
+                    <p class="text-primary fs-5 fw-bold" id="qty-menu-price"><?php echo $currency_symbol ?? '₱'; ?> 0</p>
                 </div>
                 <div class="d-flex justify-content-center align-items-center gap-4 mb-4">
                     <button class="qty-control-btn" onclick="changeQty(-1)"><i class="bi bi-dash-lg fs-4"></i></button>
@@ -96,7 +96,7 @@
                 <div id="grand-total-container" class="mb-4 p-3 bg-dark text-white rounded-4 d-none shadow-sm">
                     <div class="d-flex justify-content-between align-items-center px-2">
                         <span class="small fw-bold opacity-75">최종 합계 금액</span>
-                        <span class="fw-bold fs-4" id="grand-total-price">₱ 0</span>
+                        <span class="fw-bold fs-4" id="grand-total-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                 </div>
                 <div class="d-grid gap-2">
@@ -148,7 +148,7 @@
                         <?php if ($delivery_fee === 0): ?>
                             <span class="text-success fw-bold">무료 배달</span>
                         <?php else: ?>
-                            기본 배달비 <strong class="text-dark">₱ <?php echo number_format($delivery_fee); ?></strong> 부과
+                            기본 배달비 <strong class="text-dark"><?php echo $currency_symbol ?? '₱'; ?> <?php echo number_format($delivery_fee); ?></strong> 부과
                         <?php endif; ?>
                     </div>
                     <!-- JS(fnb_cart.js) 오류 방지용 숨김 요소 -->
@@ -160,16 +160,16 @@
                 <div class="p-3 bg-dark text-white rounded-4 mb-4 shadow-sm" id="cart-view-summary">
                     <div class="d-flex justify-content-between align-items-center px-2 small mb-2">
                         <span class="opacity-75"><?php echo __('상품 금액'); ?></span>
-                        <span id="cart-view-subtotal">₱ 0</span>
+                        <span id="cart-view-subtotal"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center px-2 small mb-2">
                         <span class="opacity-75"><?php echo __('배달료'); ?></span>
-                        <span id="cart-view-delivery-fee">₱ 0</span>
+                        <span id="cart-view-delivery-fee"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                     <hr class="my-2 border-white opacity-25">
                     <div class="d-flex justify-content-between align-items-center px-2">
                         <span class="small fw-bold opacity-75"><?php echo __('최종 합계 금액'); ?></span>
-                        <span class="fw-bold fs-4" id="cart-view-total-price">₱ 0</span>
+                        <span class="fw-bold fs-4" id="cart-view-total-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                 </div>
                 <div class="d-grid gap-2">
@@ -201,14 +201,14 @@
                         <?php if ((int)($shop['delivery_fee'] ?? 0) === 0): ?>
                             <span class="text-success fw-bold">무료 배달</span>
                         <?php else: ?>
-                            기본 배달비 <strong class="text-dark">₱ <?php echo number_format((int)($shop['delivery_fee'] ?? 0)); ?></strong> 부과
+                            기본 배달비 <strong class="text-dark"><?php echo $currency_symbol ?? '₱'; ?> <?php echo number_format((int)($shop['delivery_fee'] ?? 0)); ?></strong> 부과
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
                 <div id="cart-modal-summary" class="d-flex justify-content-between align-items-center mb-4 px-3 py-3 bg-white border rounded-4 shadow-sm">
                     <span class="fw-bold text-muted">총 결제 예정 금액</span>
-                    <span class="fw-bold fs-3 text-primary" id="cart-total-price">₱ 0</span>
+                    <span class="fw-bold fs-3 text-primary" id="cart-total-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                 </div>
                 <form id="orderForm">
                     <?php
@@ -355,12 +355,12 @@
                     <?php if (($shop['is_delivery_available'] ?? 1) == 1): ?>
                     <div class="d-flex justify-content-between align-items-center small text-dark mt-2 border-top pt-2 mb-1">
                         <span><?php echo __('배달료'); ?></span>
-                        <span id="confirm-delivery-fee" class="fw-bold">₱ 0</span>
+                        <span id="confirm-delivery-fee" class="fw-bold"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                     <?php endif; ?>
                     <div class="d-flex justify-content-between align-items-center fw-bold text-dark mt-1 border-top pt-2">
                         <span><?php echo __('총 결제 금액'); ?></span>
-                        <span id="confirm-total-price" class="text-primary fs-5">₱ 0</span>
+                        <span id="confirm-total-price" class="text-primary fs-5"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                 </div>
 

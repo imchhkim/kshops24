@@ -4,6 +4,25 @@
  * KShops24 서비스/예약 관리 모달 분리 모듈 (manage_shop_srv_modals.php)
  */
 if (!isset($shop_id)) exit;
+
+// [다국어] 활성화된 언어 배열을 부모 스코프에서 한 번만 생성하여 여러 모달 탭에서 재사용
+$is_multi = ($ui['is_multilingual'] ?? 0) == 1;
+$active_langs = [];
+if ($is_multi) {
+    for ($i = 1; $i <= 2; $i++) {
+        $lang = $ui["multilingual_lang{$i}"] ?? 'none';
+        if ($lang !== 'none') {
+            if ($lang === 'etc') {
+                $code = strtolower(trim($ui["multilingual_lang{$i}_custom_code"] ?? "etc{$i}"));
+                if (empty($code)) $code = "etc{$i}";
+                $name = trim($ui["multilingual_lang{$i}_custom_name"] ?? 'Other');
+                $active_langs[$code] = $name;
+            } else {
+                $active_langs[$lang] = SUPPORTED_LANGUAGES[$lang] ?? strtoupper($lang);
+            }
+        }
+    }
+}
 ?>
 
 <!-- 서비스 정보 수정 모달 -->
@@ -76,35 +95,6 @@ if (!isset($shop_id)) exit;
 
                 <!-- [신규] 다국어 지원 매물 정보 입력 탭 -->
                 <div class="mb-4">
-                    <?php
-                    $is_multi = ($ui['is_multilingual'] ?? 0) == 1;
-                    $supported_langs_name = [
-                        'ko' => '한국어',
-                        'en' => '영어',
-                        'zh' => '중국어',
-                        'ja' => '일본어',
-                        'es' => '스페인어',
-                        'fr' => '프랑스어',
-                        'ru' => '러시아어',
-                        'vi' => '베트남어'
-                    ];
-                    $active_langs = [];
-                    if ($is_multi) {
-                        for ($i = 1; $i <= 2; $i++) {
-                            $lang = $ui["multilingual_lang{$i}"] ?? 'none';
-                            if ($lang !== 'none') {
-                                if ($lang === 'etc') {
-                                    $code = strtolower(trim($ui["multilingual_lang{$i}_custom_code"] ?? "etc{$i}"));
-                                    if (empty($code)) $code = "etc{$i}";
-                                    $name = trim($ui["multilingual_lang{$i}_custom_name"] ?? 'Other');
-                                    $active_langs[$code] = $name;
-                                } else {
-                                    $active_langs[$lang] = $supported_langs_name[$lang] ?? strtoupper($lang);
-                                }
-                            }
-                        }
-                    }
-                    ?>
                     <?php if (!empty($active_langs)): ?>
                     <ul class="nav nav-tabs mb-2" role="tablist">
                         <li class="nav-item" role="presentation">
@@ -162,20 +152,39 @@ if (!isset($shop_id)) exit;
                     <!-- 최종 JSON 데이터가 여기에 담겨 서버로 전송됩니다. -->
                     <input type="hidden" name="item_youtube_url" id="item_youtube_url">
                 </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-4">
-                        <label class="form-label small fw-bold">서비스 가격 (₱)</label>
-                        <input type="number" name="item_price" id="item_price" class="form-control" required oninput="calculateDiscount()">
+
+                <div class="mb-3 border p-3 rounded bg-light">
+                    <label class="form-label small fw-bold">가격 입력 방식</label>
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="price_type" id="price_type_number" value="number" checked onchange="togglePriceInput()">
+                            <label class="form-check-label small" for="price_type_number">숫자 입력 (할인 적용 가능)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="price_type" id="price_type_text" value="text" onchange="togglePriceInput()">
+                            <label class="form-check-label small" for="price_type_text">텍스트 입력 (예: 상담 후 결정 등)</label>
+                        </div>
                     </div>
-                    <div class="col-4">
-                        <label class="form-label small fw-bold text-danger">할인율 (%)</label>
-                        <input type="number" name="item_discount_rate" id="item_discount_rate" class="form-control" placeholder="0" oninput="calculateDiscount()">
+                    <div class="row g-2" id="price_number_area">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">서비스 가격 (<?php echo $currency_symbol ?? '₱'; ?>)</label>
+                            <input type="number" name="item_price" id="item_price" class="form-control" oninput="calculateDiscount()">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-danger">할인율 (%)</label>
+                            <input type="number" name="item_discount_rate" id="item_discount_rate" class="form-control" placeholder="0" oninput="calculateDiscount()">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold text-danger">할인 가격</label>
+                            <input type="number" name="item_discount_price" id="item_discount_price" class="form-control" readonly>
+                        </div>
+                        <p class="text-muted small mt-2 mb-2"><i class="bi bi-lightbulb me-1"></i> "할인율 (%)"에 값을 입력하면 본 서비스는 "할인 서비스"로 표시됩니다.</p>
                     </div>
-                    <div class="col-4">
-                        <label class="form-label small fw-bold text-danger">할인 가격</label>
-                        <input type="number" name="item_discount_price" id="item_discount_price" class="form-control" readonly>
+                    <div class="d-none" id="price_text_area">
+                        <label class="form-label small fw-bold">가격 정보 (텍스트)</label>
+                        <textarea name="price_description" id="price_description" class="form-control" rows="2" placeholder="예: 10,000원 ~ 50,000원 (상담 후 결정)"></textarea>
+                        <p class="text-muted small mt-2 mb-0"><i class="bi bi-lightbulb me-1"></i> 숫자로 표현하기 힘든 가격 정보를 자유롭게 입력하세요.</p>
                     </div>
-                    <p class="text-muted small mt-2 mb-2"><i class="bi bi-lightbulb me-1"></i> "할인율 (%)"에 값을 입력하면 본 서비스는 "할인 서비스"로 표시됩니다.</p>
                 </div>
 
                 <div class="row g-2 mt-2">
@@ -240,33 +249,6 @@ if (!isset($shop_id)) exit;
                     <div class="form-text" style="font-size: 0.7rem;"><i class="bi bi-info-circle text-primary me-1"></i> 예약 가능 시간을 비워두면 영업시간과 동일하게 표시됩니다.</div>
                 </div>
                 <?php
-                $is_multi = ($ui['is_multilingual'] ?? 0) == 1;
-                $supported_langs_name = [
-                    'ko' => '한국어',
-                    'en' => '영어',
-                    'zh' => '중국어',
-                    'ja' => '일본어',
-                    'es' => '스페인어',
-                    'fr' => '프랑스어',
-                    'ru' => '러시아어',
-                    'vi' => '베트남어'
-                ];
-                $active_langs = [];
-                if ($is_multi) {
-                    for ($i = 1; $i <= 2; $i++) {
-                        $lang = $ui["multilingual_lang{$i}"] ?? 'none';
-                        if ($lang !== 'none') {
-                            if ($lang === 'etc') {
-                                $code = strtolower(trim($ui["multilingual_lang{$i}_custom_code"] ?? "etc{$i}"));
-                                if (empty($code)) $code = "etc{$i}";
-                                $name = trim($ui["multilingual_lang{$i}_custom_name"] ?? 'Other');
-                                $active_langs[$code] = $name;
-                            } else {
-                                $active_langs[$lang] = $supported_langs_name[$lang] ?? strtoupper($lang);
-                            }
-                        }
-                    }
-                }
                 $policy_trans = json_decode($shop['policy_translations'] ?? '{}', true);
                 ?>
                 <div class="mb-4">
@@ -367,6 +349,19 @@ if (!isset($shop_id)) exit;
     }
 </script>
 
+<script>
+    function togglePriceInput() {
+        const type = document.querySelector('input[name="price_type"]:checked').value;
+        if (type === 'number') {
+            document.getElementById('price_number_area').classList.remove('d-none');
+            document.getElementById('price_text_area').classList.add('d-none');
+        } else {
+            document.getElementById('price_number_area').classList.add('d-none');
+            document.getElementById('price_text_area').classList.remove('d-none');
+        }
+    }
+</script>
+
 <!-- 미디어 상세 보기 모달 -->
 <div class="modal fade" id="itemMediaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -418,8 +413,8 @@ if (!isset($shop_id)) exit;
                         </button>
                     </div>
                     <div class="price-area mb-4 p-3 bg-light rounded-3">
-                        <span class="fs-4 fw-bold text-primary" id="preview-final-price">₱ 0</span>
-                        <span class="text-muted text-decoration-line-through small ms-2 d-none" id="preview-original-price">₱ 0</span>
+                        <span class="fs-4 fw-bold text-primary" id="preview-final-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
+                        <span class="text-muted text-decoration-line-through small ms-2 d-none" id="preview-original-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
                     </div>
                     <div class="mb-5">
                         <h6 class="fw-bold mb-3"><i class="bi bi-card-text me-2"></i>상세 정보</h6>

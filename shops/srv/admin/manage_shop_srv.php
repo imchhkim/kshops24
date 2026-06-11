@@ -69,6 +69,11 @@ if (isset($grouped_items['기타'])) {
     unset($grouped_items['기타']);
     $grouped_items['기타'] = $temp_unassigned;
 }
+
+// 상점 환경 설정(UI 설정)에 기반한 국가별 통화 기호 동적 설정
+$shop_country = strtoupper($ui['country'] ?? 'PH');
+global $global_country_config;
+$currency_symbol = isset($global_country_config[$shop_country]['symbol']) ? $global_country_config[$shop_country]['symbol'] : '₱';
 ?>
 
 <style>
@@ -370,11 +375,13 @@ if (isset($grouped_items['기타'])) {
                                             <div class="d-flex flex-column flex-md-row justify-content-between align-items-end align-items-md-center flex-md-shrink-0 mt-2 mt-md-0 w-100 w-md-auto info-action-container">
                                                 <div class="d-flex flex-row flex-md-column justify-content-between align-items-center align-items-md-end gap-2 gap-md-1 w-100 w-md-auto mb-2 mb-md-0">
                                                     <div class="fw-bold text-primary">
-                                                        <?php if (!empty($m['item_discount_rate']) && $m['item_discount_rate'] > 0): ?>
-                                                            <?php echo number_format((float)($m['item_discount_price'] ?? 0)); ?> ₱
+                                                        <?php if (!empty($m['price_description'])): ?>
+                                                            <span style="font-size: 0.95rem; white-space: pre-wrap;"><?php echo nl2br(htmlspecialchars($m['price_description'])); ?></span>
+                                                        <?php elseif (!empty($m['item_discount_rate']) && $m['item_discount_rate'] > 0): ?>
+                                                            <?php echo $currency_symbol; ?> <?php echo number_format((float)($m['item_discount_price'] ?? 0)); ?>
                                                             <span class="text-danger small fw-normal ms-1">(<?php echo $m['item_discount_rate']; ?>% 할인)</span>
                                                         <?php else: ?>
-                                                            <?php echo number_format((float)($m['item_price'] ?? 0)); ?> ₱
+                                                            <?php echo $currency_symbol; ?> <?php echo number_format((float)($m['item_price'] ?? 0)); ?>
                                                         <?php endif; ?>
                                                     </div>
                                                     <div class="d-flex flex-wrap gap-1 justify-content-end">
@@ -400,8 +407,6 @@ if (isset($grouped_items['기타'])) {
             </div>
         </div>
     </div>
-
-
 
 </div>
 
@@ -489,17 +494,27 @@ if (isset($grouped_items['기타'])) {
         // 가격 바인딩
         const finalPrice = document.getElementById('preview-final-price');
         const origPrice = document.getElementById('preview-original-price');
-        const price = parseInt(previewItem.item_price) || 0;
-        const discountRate = parseInt(previewItem.item_discount_rate) || 0;
-        const discountPrice = parseInt(previewItem.item_discount_price) || 0;
 
-        if (discountRate > 0) {
-            finalPrice.innerText = '₱ ' + discountPrice.toLocaleString();
-            origPrice.innerText = '₱ ' + price.toLocaleString();
-            origPrice.classList.remove('d-none');
-        } else {
-            finalPrice.innerText = '₱ ' + price.toLocaleString();
+        if (previewItem.price_description && previewItem.price_description.trim() !== '') {
+            finalPrice.innerHTML = previewItem.price_description.replace(/\n/g, '<br>');
+            finalPrice.classList.remove('fs-4');
+            finalPrice.classList.add('fs-6');
             origPrice.classList.add('d-none');
+        } else {
+            finalPrice.classList.remove('fs-6');
+            finalPrice.classList.add('fs-4');
+            const price = parseInt(previewItem.item_price) || 0;
+            const discountRate = parseInt(previewItem.item_discount_rate) || 0;
+            const discountPrice = parseInt(previewItem.item_discount_price) || 0;
+
+            if (discountRate > 0) {
+                finalPrice.innerText = '<?php echo $currency_symbol; ?> ' + discountPrice.toLocaleString();
+                origPrice.innerText = '<?php echo $currency_symbol; ?> ' + price.toLocaleString();
+                origPrice.classList.remove('d-none');
+            } else {
+                finalPrice.innerText = '<?php echo $currency_symbol; ?> ' + price.toLocaleString();
+                origPrice.classList.add('d-none');
+            }
         }
 
         // 배지 바인딩
@@ -616,6 +631,10 @@ if (isset($grouped_items['기타'])) {
         setVal('old_img_path', "");
         setVal('trade_type', "방문 서비스"); // srv 기본값
 
+        setVal('price_description', "");
+        document.getElementById('price_type_number').checked = true;
+        if (typeof togglePriceInput === 'function') togglePriceInput();
+
         // [다국어] 동적으로 생성된 다국어 입력 필드 자동 초기화
         document.querySelectorAll('input[name^="item_name_"]').forEach(input => {
             const langCode = input.name.replace('item_name_', '');
@@ -687,6 +706,14 @@ if (isset($grouped_items['기타'])) {
         setVal('item_discount_rate', item.item_discount_rate || "");
         setVal('item_discount_price', item.item_discount_price || item.item_price || "");
         setVal('item_info', item.item_info || "");
+        setVal('price_description', item.price_description || "");
+
+        if (item.price_description && item.price_description.trim() !== '') {
+            document.getElementById('price_type_text').checked = true;
+        } else {
+            document.getElementById('price_type_number').checked = true;
+        }
+        if (typeof togglePriceInput === 'function') togglePriceInput();
 
         // [다국어] JSON 파싱 및 데이터 바인딩
         let trans = {};

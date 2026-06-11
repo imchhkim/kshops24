@@ -244,6 +244,20 @@
                     } else if (postLoginAction === 'realty_history') {
                         // [추가] 카카오 로그인 성공 후 부동산 전용 문의 내역 모달 열기
                         if (typeof openRealtyOrderHistoryModal === 'function') openRealtyOrderHistoryModal();
+                    } else if (postLoginAction === 'srv_history') {
+                        // [수정] 카카오 로그인 성공 후 서비스 예약/문의 내역 모달 자동 열기 (전화번호 부재 시 예외처리 강화)
+                        const savedPhone = localStorage.getItem('srv_last_search_phone') || localStorage.getItem('ps24_guest_phone') || '';
+                        if (savedPhone && typeof fetchServiceInquiryHistory === 'function') {
+                            fetchServiceInquiryHistory(savedPhone);
+                        } else if (!savedPhone) {
+                            // 로그인 직후 번호가 없는 경우, common_modals.php에서 이미 phInfoModal을 띄웠을 가능성이 높습니다.
+                            // 따라서 여기서는 후속 액션('srv_history')만 예약해두어, 번호 저장 후 내역 조회가 실행되도록 합니다.
+                            window.pendingPhInfoAction = 'srv_history';
+                            const phModal = document.getElementById('phInfoModal');
+                            if (phModal && !phModal.classList.contains('show')) {
+                                if (typeof showBsModal === 'function') showBsModal('phInfoModal');
+                            }
+                        }
                     } else if (postLoginAction === 'realty_cart_inquiry') {
                         if (typeof showCartViewModal === 'function') showCartViewModal();
                     } else if (postLoginAction === 'realty_cart_inquiry_auto_submit') {

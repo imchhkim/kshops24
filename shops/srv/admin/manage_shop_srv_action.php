@@ -8,42 +8,6 @@ if (!isset($shop_id)) exit;
 
 $redirect_pg = $_GET['pg'] ?? 'manage_shop_item';
 
-// [자동 테이블 업데이트] 홈페이지 정책 노출 여부 컬럼 추가
-try {
-    $pdo->exec("ALTER TABLE shops ADD COLUMN is_show_delivery TINYINT(1) NOT NULL DEFAULT 1");
-} catch (Exception $e) {
-}
-
-// [자동 테이블 업데이트] 거래 유형(trade_type) 컬럼 추가 및 확장
-// ENUM 타입으로 생성되어 있을 경우를 대비해 다양한 문자열을 담을 수 있는 VARCHAR(50)으로 변경합니다.
-try {
-    $pdo->exec("ALTER TABLE shop_items MODIFY COLUMN trade_type VARCHAR(50) NOT NULL DEFAULT '방문 서비스' COMMENT '거래 유형'");
-} catch (Exception $e) {
-    // 컬럼이 아예 없는 경우 새로 추가
-    try {
-        $pdo->exec("ALTER TABLE shop_items ADD COLUMN trade_type VARCHAR(50) NOT NULL DEFAULT '방문 서비스' COMMENT '거래 유형' AFTER cat_id");
-    } catch (Exception $e2) {
-    }
-}
-
-// [자동 테이블 업데이트] 카테고리 다국어 번역 저장을 위한 컬럼 추가
-try {
-    $pdo->exec("ALTER TABLE shop_item_categories ADD COLUMN translations TEXT NULL COMMENT '다국어 자동번역 데이터(JSON)'");
-} catch (Exception $e) {
-}
-
-// [자동 테이블 업데이트] 정책 다국어 번역 저장을 위한 컬럼 추가
-try {
-    $pdo->exec("ALTER TABLE shops ADD COLUMN policy_translations TEXT NULL COMMENT '정책 다국어 자동번역 데이터(JSON)'");
-} catch (Exception $e) {
-}
-
-// [자동 테이블 업데이트] 예약 상세 설정(슬롯, 중복 인원 등) 저장을 위한 컬럼 추가
-try {
-    $pdo->exec("ALTER TABLE shops ADD COLUMN reservation_settings TEXT NULL COMMENT '서비스/예약 상세 설정 데이터(JSON)'");
-} catch (Exception $e) {
-}
-
 // [AJAX] 정책 노출 상태 변경 처리
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_policy_display') {
     while (ob_get_level()) {
@@ -294,10 +258,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
     $is_soldout = isset($_POST['is_soldout']) ? 1 : 0;
     $is_hide = isset($_POST['is_hide']) ? 1 : 0;
     $cat_id = !empty($_POST['cat_id']) ? (int)$_POST['cat_id'] : null;
-        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
-    $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
-    $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
     $trade_type = $_POST['trade_type'] ?? '방문 서비스';
+
+    $price_type = $_POST['price_type'] ?? 'number';
+    if ($price_type === 'text') {
+        $item_price = 0;
+        $discount_price = 0;
+        $discount_rate = 0;
+        $price_description = trim($_POST['price_description'] ?? '');
+    } else {
+        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
+        $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
+        $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
+        $price_description = null;
+    }
 
     // [신규] POST 데이터를 스캔하여 다국어 데이터 JSON 동적 처리
     $translations = [];
@@ -315,7 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
     }
     $json_translations = !empty($translations) ? json_encode($translations, JSON_UNESCAPED_UNICODE) : null;
 
-    $sql = "INSERT INTO shop_items (shop_id, cat_id, trade_type, item_name, item_price, item_discount_price, item_discount_rate, item_info, item_img, item_youtube_url, is_best, is_new, is_soldout, is_hide, translations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO shop_items (shop_id, cat_id, trade_type, item_name, item_price, item_discount_price, item_discount_rate, item_info, price_description, item_img, item_youtube_url, is_best, is_new, is_soldout, is_hide, translations) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $pdo->prepare($sql)->execute([
         $shop_id,
         $cat_id,
@@ -325,6 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_item'])) {
         $discount_price,
         $discount_rate,
         $_POST['item_info'] ?? '',
+        $price_description,
         $_POST['item_img_path'] ?? '',
         $_POST['item_youtube_url'] ?? '',
         $is_best,
@@ -364,10 +339,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
     $is_soldout = isset($_POST['is_soldout']) ? 1 : 0;
     $is_hide = isset($_POST['is_hide']) ? 1 : 0;
     $cat_id = !empty($_POST['cat_id']) ? (int)$_POST['cat_id'] : null;
-        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
-    $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
-    $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
     $trade_type = $_POST['trade_type'] ?? '방문 서비스';
+
+    $price_type = $_POST['price_type'] ?? 'number';
+    if ($price_type === 'text') {
+        $item_price = 0;
+        $discount_price = 0;
+        $discount_rate = 0;
+        $price_description = trim($_POST['price_description'] ?? '');
+    } else {
+        $item_price = !empty($_POST['item_price']) ? (int)$_POST['item_price'] : 0;
+        $discount_price = !empty($_POST['item_discount_price']) ? (int)$_POST['item_discount_price'] : 0;
+        $discount_rate = !empty($_POST['item_discount_rate']) ? (int)$_POST['item_discount_rate'] : 0;
+        $price_description = null;
+    }
 
     // [신규] POST 데이터를 스캔하여 다국어 데이터 JSON 동적 처리
     $translations = [];
@@ -409,7 +394,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
         $old_item_img = $new_item_img;
     }
 
-    $sql = "UPDATE shop_items SET cat_id = ?, trade_type = ?, item_name = ?, item_price = ?, item_discount_price = ?, item_discount_rate = ?, item_info = ?, item_img = ?, item_youtube_url = ?, is_best = ?, is_new = ?, is_soldout = ?, is_hide = ?, translations = ? WHERE id = ? AND shop_id = ?";
+    $sql = "UPDATE shop_items SET cat_id = ?, trade_type = ?, item_name = ?, item_price = ?, item_discount_price = ?, item_discount_rate = ?, item_info = ?, price_description = ?, item_img = ?, item_youtube_url = ?, is_best = ?, is_new = ?, is_soldout = ?, is_hide = ?, translations = ? WHERE id = ? AND shop_id = ?";
     $pdo->prepare($sql)->execute([
         $cat_id,
         $trade_type,
@@ -418,6 +403,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_item'])) {
         $discount_price,
         $discount_rate,
         $_POST['item_info'] ?? '',
+        $price_description,
         $old_item_img,
         $_POST['item_youtube_url'] ?? '',
         $is_best,

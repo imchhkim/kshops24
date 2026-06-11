@@ -130,6 +130,42 @@ register_shutdown_function(function () {
 // 페이지당 출력 항목 수 공통 상수 정의
 define('ITEMS_PER_PAGE', 5);
 
+// 통화 기호 공통 상수 정의
+if (!defined('CURRENCY_SYMBOLS')) {
+    define('CURRENCY_SYMBOLS', [
+        'PHP' => '₱',
+        'KRW' => '₩',
+        'USD' => '$',
+        'JPY' => '¥',
+        'CNY' => '¥',
+        'VND' => '₫'
+    ]);
+}
+
+// 다국어 지원 언어 목록 공통 상수 정의
+if (!defined('SUPPORTED_LANGUAGES')) {
+    define('SUPPORTED_LANGUAGES', [
+        'ko' => '한국어',
+        'en' => '영어',
+        'zh' => '중국어',
+        'ja' => '일본어',
+        'es' => '스페인어',
+        'fr' => '프랑스어',
+        'ru' => '러시아어',
+        'vi' => '베트남어'
+    ]);
+}
+
+// 다국어 지원 언어 짧은 이름 공통 상수 정의 (프론트 드롭다운 등에서 사용)
+if (!defined('SUPPORTED_LANGUAGES_SHORT')) {
+    define('SUPPORTED_LANGUAGES_SHORT', [
+        'ko' => '한', 'en' => 'En',
+        'zh' => '中', 'ja' => '日',
+        'es' => 'Esp', 'fr' => 'Fr',
+        'ru' => 'Ру', 'vi' => 'Vi'
+    ]);
+}
+
 // 4. 핵심 설정 파일 경로 정의 (절대 경로)
 $db_config_file   = $base_dir . '/db_config.php';
 $site_config_file = $base_dir . '/config.php';

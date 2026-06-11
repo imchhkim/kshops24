@@ -89,16 +89,6 @@ if (!isset($shop_id)) exit;
                 <!-- [신규] 다국어 지원 매물 정보 입력 탭 -->
                 <div class="mb-4">
                     <?php
-                    $supported_langs_name = [
-                        'ko' => '한국어',
-                        'en' => '영어',
-                        'zh' => '중국어',
-                        'ja' => '일본어',
-                        'es' => '스페인어',
-                        'fr' => '프랑스어',
-                        'ru' => '러시아어',
-                        'vi' => '베트남어'
-                    ];
                     $active_langs = [];
                     for ($i = 1; $i <= 2; $i++) {
                         $lang = $ui["multilingual_lang{$i}"] ?? 'none';
@@ -109,7 +99,7 @@ if (!isset($shop_id)) exit;
                                 $name = trim($ui["multilingual_lang{$i}_custom_name"] ?? 'Other');
                                 $active_langs[$code] = $name;
                             } else {
-                                $active_langs[$lang] = $supported_langs_name[$lang] ?? strtoupper($lang);
+                                $active_langs[$lang] = SUPPORTED_LANGUAGES[$lang] ?? strtoupper($lang);
                             }
                         }
                     }
@@ -169,7 +159,7 @@ if (!isset($shop_id)) exit;
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-4">
-                        <label class="form-label small fw-bold">매매가/월세 (₱)</label>
+                        <label class="form-label small fw-bold">매매가/월세 (<?php echo $currency_symbol ?? '₱'; ?>)</label>
                         <input type="text" id="item_price_display" class="form-control" required oninput="formatNumberInput(this); calculateDiscount()">
                         <input type="hidden" name="item_price" id="item_price">
                     </div>

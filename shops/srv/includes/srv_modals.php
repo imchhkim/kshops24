@@ -56,9 +56,16 @@
                             <span id="detail-wish-count" class="fw-bold ms-1 d-none" style="font-size: 0.95rem;">0</span>
                         </button>
                     </div>
+                    
+                    <!-- [수정] 가격 정보 영역: 텍스트 가격 정보가 있으면 우선 표시, 없으면 숫자 가격 표시 -->
                     <div class="price-area mb-4 p-3 bg-light rounded-3">
-                        <span class="fs-4 fw-bold text-primary" id="detail-final-price">₱ 0</span>
-                        <span class="text-muted text-decoration-line-through small ms-2 d-none" id="detail-original-price">₱ 0</span>
+                        <!-- 텍스트 가격 전용 영역 -->
+                        <span class="fs-6 fw-bold text-primary d-none" id="detail-text-price" style="white-space: pre-wrap;"></span>
+                        <!-- 숫자 가격 전용 영역 -->
+                        <div id="detail-number-price-wrap">
+                            <span class="fs-4 fw-bold text-primary" id="detail-final-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
+                            <span class="text-muted text-decoration-line-through small ms-2 d-none" id="detail-original-price"><?php echo $currency_symbol ?? '₱'; ?> 0</span>
+                        </div>
                     </div>
 
                     <!-- 3. 서비스 상세 설명 -->
@@ -191,9 +198,11 @@
                             <p class="small text-muted mb-1"><?php echo __('조회 기준 연락처'); ?></p>
                             <h5 class="fw-bold text-dark m-0" id="service-history-phone-display"><i class="bi bi-telephone text-primary me-2"></i></h5>
                         </div>
+                        <?php if (!isset($_SESSION['customer_id'])): ?>
                         <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm" onclick="clearSavedGuestPhone()">
                             <i class="bi bi-trash me-1"></i><?php echo __('삭제'); ?>
                         </button>
+                        <?php endif; ?>
                     </div>
                     <script>
                     function clearSavedGuestPhone() {
@@ -210,7 +219,10 @@
                                 if (bsModal) bsModal.hide();
                             }
                             
-                            if(typeof showToast === 'function') showToast('<?php echo addslashes(__('연락처가 성공적으로 삭제되었습니다.')); ?>', 'success');
+                            // 성공 알림 및 페이지 새로고침
+                            if(typeof showToast === 'function') showToast('<?php echo addslashes(__('연락처가 성공적으로 삭제되었습니다. 잠시 후 새로고침됩니다.')); ?>', 'success');
+                            
+                            setTimeout(() => window.location.reload(), 1500);
                         }
                     }
                     </script>

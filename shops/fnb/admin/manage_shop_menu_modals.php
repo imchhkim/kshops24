@@ -4,12 +4,6 @@
  * KShops24 메뉴 관리 모달 분리 모듈 (manage_shop_menu_modals.php)
  */
 if (!isset($shop_id)) exit;
-
-// [다국어] UI 설정에서 활성화된 언어 코드 가져오기
-$lang1 = $ui['multilingual_lang1'] ?? 'none';
-$lang2 = $ui['multilingual_lang2'] ?? 'none';
-$lang1_code = $lang1;
-$lang2_code = $lang2;
 ?>
 
 <!-- [모달 1] 메뉴 설정 모달 -->
@@ -174,12 +168,6 @@ $lang2_code = $lang2;
                     <div class="col-6"><label class="form-label small fw-bold">무료 배달 주문액</label><input type="number" name="free_delivery_amount" class="form-control" value="<?php echo (int)($shop['free_delivery_amount'] ?? 0); ?>"><label class="form-label small fw-bold text-danger">0을 입력한 경우, 무료배달 없음</label></div>
                 </div>
                 <?php
-                $lang1 = $ui['multilingual_lang1'] ?? 'none';
-                $lang2 = $ui['multilingual_lang2'] ?? 'none';
-                $lang1_code = $lang1 === 'etc' ? strtolower(trim($ui['multilingual_lang1_custom_code'] ?? 'etc1')) : $lang1;
-                if (empty($lang1_code)) $lang1_code = 'etc1';
-                $lang2_code = $lang2 === 'etc' ? strtolower(trim($ui['multilingual_lang2_custom_code'] ?? 'etc2')) : $lang2;
-                if (empty($lang2_code)) $lang2_code = 'etc2';
                 $policy_trans = json_decode($shop['policy_translations'] ?? '{}', true);
                 ?>
                 <div class="mb-3 mt-2">

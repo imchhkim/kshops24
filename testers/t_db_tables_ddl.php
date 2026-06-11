@@ -143,24 +143,50 @@ try {
                     }
                 }
                 
-                if (empty($col_diffs)) {
-                    $col_diffs[] = "<span class='text-secondary'>컬럼 외 인덱스(Key) 또는 테이블 옵션이 변경됨</span>";
+                // 인덱스 및 테이블 옵션 변경 스캔 (컬럼 변경과 독립적으로 검사)
+                $test_lines = explode("\n", $info['ddl']); 
+                $live_lines = explode("\n", $live_schema[$table]['ddl']);
+                
+                $added_lines = array_diff($test_lines, $live_lines);
+                $removed_lines = array_diff($live_lines, $test_lines);
+                
+                // 인덱스 삭제부터 처리
+                foreach ($removed_lines as $line) {
+                    $clean_line = trim($line, " \t\n\r\0\x0B,");
+                    if ($clean_line === '') continue;
                     
-                    // [추가] 어떤 인덱스/옵션이 달라졌는지 DDL 줄 단위(Line) 비교로 직관적 안내
-                    $test_lines = explode("\n", $info['ddl']); 
-                    $live_lines = explode("\n", $live_schema[$table]['ddl']);
-                    
-                    $added_lines = array_diff($test_lines, $live_lines);
-                    $removed_lines = array_diff($live_lines, $test_lines);
-                    
-                    foreach ($added_lines as $line) {
-                        if (trim($line) !== '') $col_diffs[] = "<span class='text-success fw-bold'>[추가해야 할 내용]</span> <code class='text-muted'>" . htmlspecialchars(trim($line, " \t\n\r\0\x0B,")) . "</code>";
+                    if (preg_match('/^PRIMARY KEY/i', $clean_line)) {
+                        $alter_stmts[] = "DROP PRIMARY KEY";
+                        $col_diffs[] = "<span class='text-danger fw-bold'>[삭제]</span> <code class='text-muted'>PRIMARY KEY</code>";
+                    } elseif (preg_match('/^(?:UNIQUE KEY|KEY|FULLTEXT KEY)\s+`([^`]+)`/i', $clean_line, $matches)) {
+                        $alter_stmts[] = "DROP INDEX `{$matches[1]}`";
+                        $col_diffs[] = "<span class='text-danger fw-bold'>[삭제]</span> <code class='text-muted'>INDEX `{$matches[1]}`</code>";
+                    } elseif (preg_match('/^CONSTRAINT\s+`([^`]+)`/i', $clean_line, $matches)) {
+                        $alter_stmts[] = "DROP FOREIGN KEY `{$matches[1]}`";
+                        $col_diffs[] = "<span class='text-danger fw-bold'>[삭제]</span> <code class='text-muted'>FOREIGN KEY `{$matches[1]}`</code>";
                     }
-                    foreach ($removed_lines as $line) {
-                        if (trim($line) !== '') $col_diffs[] = "<span class='text-danger fw-bold'>[삭제해야 할 내용]</span> <code class='text-muted'>" . htmlspecialchars(trim($line, " \t\n\r\0\x0B,")) . "</code>";
-                    }
+                }
 
-                    $alter_stmts[] = "/* 인덱스 또는 테이블 옵션 변경. 위 상세 비교를 참고하여 수동으로 쿼리를 작성해주세요. */";
+                // 인덱스 추가 및 테이블 옵션 변경 처리
+                foreach ($added_lines as $line) {
+                    $clean_line = trim($line, " \t\n\r\0\x0B,");
+                    if ($clean_line === '') continue;
+                    
+                    if (preg_match('/^(PRIMARY KEY|UNIQUE KEY|KEY|FULLTEXT KEY|CONSTRAINT)\s/i', $clean_line)) {
+                        $alter_stmts[] = "ADD {$clean_line}";
+                        $col_diffs[] = "<span class='text-success fw-bold'>[추가]</span> <code class='text-muted'>" . htmlspecialchars($clean_line) . "</code>";
+                    } elseif (preg_match('/^\)\s*(.*)/i', $clean_line, $matches)) {
+                        $table_options = trim($matches[1]);
+                        if (!empty($table_options)) {
+                            $alter_stmts[] = $table_options;
+                            $col_diffs[] = "<span class='text-info fw-bold'>[옵션 변경]</span> <code class='text-muted'>" . htmlspecialchars($table_options) . "</code>";
+                        }
+                    }
+                }
+                
+                // 여전히 감지되지 않은 미세 변경사항 Fallback
+                if (empty($col_diffs)) {
+                    $col_diffs[] = "<span class='text-secondary'>미세한 구조 변경 (수동 확인 필요)</span>";
                 }
 
                 // [추가] 완성된 ALTER 테이블 쿼리

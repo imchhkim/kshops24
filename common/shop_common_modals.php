@@ -205,6 +205,250 @@ async function validateAndSavePhone(e) {
         btn.innerHTML = originalBtnHtml;
     }
 }
+
+// [추가] 브라우저 장바구니 변경 감지 및 서버 자동 백업 (로그아웃 시 데이터 복원을 위함)
+let isLoggingOut = false; // 로그아웃 시 로컬 스토리지 삭제가 서버 백업본까지 지우는 것을 방지
+
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+    originalSetItem.apply(this, arguments);
+    const lowerKey = key.toLowerCase();
+    // 장바구니, 관심상품 등 주요 키가 업데이트될 때 서버에도 자동 백업
+    if (lowerKey.includes('cart') || lowerKey.includes('favorite') || lowerKey.includes('wish') || lowerKey.includes('like')) {
+        syncDataToServer(key, value, 'save');
+    }
+};
+
+const originalRemoveItem = localStorage.removeItem;
+localStorage.removeItem = function(key) {
+    originalRemoveItem.apply(this, arguments);
+    const lowerKey = key.toLowerCase();
+    // 로그아웃으로 인한 삭제가 아닐 경우에만 서버에서도 삭제 동기화
+    if (!isLoggingOut && (lowerKey.includes('cart') || lowerKey.includes('favorite') || lowerKey.includes('wish') || lowerKey.includes('like'))) {
+        syncDataToServer(key, '', 'delete');
+    }
+};
+
+function syncDataToServer(key, value, action) {
+    const customerId = '<?php echo isset($_SESSION['customer_id']) ? $_SESSION['customer_id'] : ""; ?>';
+    if (!customerId) return;
+    const fd = new FormData();
+    fd.append('key', key);
+    fd.append('value', value);
+    fetch('/shops/sync_user_data.php?action=' + action, { method: 'POST', body: fd }).catch(e => {});
+}
+
+// [추가] 카카오 로그인/로그아웃 상태에 따른 브라우저 로컬 스토리지(전화번호) 동기화 및 정보 입력 모달 호출
+document.addEventListener('DOMContentLoaded', function() {
+    const currentCustomerId = '<?php echo isset($_SESSION['customer_id']) ? $_SESSION['customer_id'] : ""; ?>';
+    const currentCustomerPhone = '<?php echo isset($_SESSION['customer_ph_phone']) ? preg_replace('/[^0-9+]/', '', $_SESSION['customer_ph_phone']) : ""; ?>';
+    const storedCustomerId = localStorage.getItem('ps24_logged_in_customer_id');
+
+    if (currentCustomerId) {
+        // 1. 로그인 상태인 경우
+        if (storedCustomerId !== currentCustomerId) {
+            // 카카오 로그인 직후 (계정이 변경되거나 새로 로그인 됨)
+            // 기존 저장된 전화번호 정보 모두 삭제
+            isLoggingOut = true; // 삭제 전 서버 동기화 방지 플래그 온
+            localStorage.removeItem('ps24_guest_phone');
+            localStorage.removeItem('srv_last_search_phone');
+            localStorage.removeItem('realty_last_search_phone');
+            isLoggingOut = false;
+            
+            if (currentCustomerPhone) {
+                // DB에 전화번호가 있으면 브라우저 로컬 스토리지에 저장
+                localStorage.setItem('ps24_guest_phone', currentCustomerPhone);
+                localStorage.setItem('srv_last_search_phone', currentCustomerPhone);
+                localStorage.setItem('realty_last_search_phone', currentCustomerPhone);
+            } else {
+                // 신규 고객이거나 번호가 없는 경우 모달 띄우기
+                setTimeout(() => {
+                    const phModalEl = document.getElementById('phInfoModal');
+                    if (phModalEl) {
+                        const bsPhModal = bootstrap.Modal.getOrCreateInstance(phModalEl);
+                        bsPhModal.show();
+                    }
+                }, 500); // UI가 완전히 렌더링 된 후 부드럽게 띄우기 위해 딜레이 부여
+            }
+
+            // [추가] 로그인 성공 시 서버 DB에서 기존 장바구니, 관심 상품 내역을 가져와 브라우저 로컬 스토리지에 복원
+            if (typeof window.fetch !== 'undefined') {
+                fetch('/shops/sync_user_data.php?action=load')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.status === 'success' && data.items) {
+                            let isRestored = false;
+                            for (const [key, value] of Object.entries(data.items)) {
+                                // 복원 시에는 무한 백업 루프를 막기 위해 서버에 다시 보내지 않고 원본 저장 함수를 직접 호출
+                                originalSetItem.call(localStorage, key, value);
+                                isRestored = true;
+                            }
+                            if (isRestored) {
+                                window.dispatchEvent(new CustomEvent('userDataRestored'));
+                                // [개선] 복원된 데이터가 플로팅 UI 등에 즉시 반영되도록 화면 1회 새로고침
+                                window.location.reload();
+                            }
+                        }
+                    }).catch(e => console.log('장바구니 복원 무시됨(API 부재 등)'));
+            }
+
+            localStorage.setItem('ps24_logged_in_customer_id', currentCustomerId);
+        } else {
+            // 이미 로그인 상태 유지 중일 때 서버에 번호가 있다면 로컬 스토리지 지속 덮어쓰기 (정보 변경 반영)
+            if (currentCustomerPhone) {
+                localStorage.setItem('ps24_guest_phone', currentCustomerPhone);
+                localStorage.setItem('srv_last_search_phone', currentCustomerPhone);
+                localStorage.setItem('realty_last_search_phone', currentCustomerPhone);
+            }
+        }
+    } else {
+        // 2. 로그아웃 상태인 경우 (세션 만료 등)
+        if (storedCustomerId) {
+            // 이전에는 로그인 상태였으나 지금은 아님 (로그아웃 됨)
+            isLoggingOut = true; // 로그아웃 삭제 시 서버 백업본 유지
+            localStorage.removeItem('ps24_guest_phone');
+            localStorage.removeItem('srv_last_search_phone');
+            localStorage.removeItem('realty_last_search_phone');
+            localStorage.removeItem('ps24_logged_in_customer_id');
+            
+            // [추가] 세션 만료로 로그아웃 처리된 경우 장바구니(FNB), 관심 서비스(SRV), 관심 매물(Realty) 내역 함께 삭제
+            const expiredKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey.includes('cart') || lowerKey.includes('favorite') || lowerKey.includes('wish') || lowerKey.includes('like')) {
+                        expiredKeys.push(key);
+                    }
+                }
+            }
+            expiredKeys.forEach(k => localStorage.removeItem(k));
+            isLoggingOut = false;
+        }
+    }
+});
+
+// [추가] '로그아웃' 버튼 또는 링크 클릭 시 로컬 스토리지 전화번호를 즉각 삭제
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('a, button');
+    if (target) {
+        const href = target.getAttribute('href') || '';
+        if (href.toLowerCase().includes('logout')) {
+            isLoggingOut = true; // 로그아웃 삭제 시 서버 백업본 유지
+            localStorage.removeItem('ps24_guest_phone');
+            localStorage.removeItem('srv_last_search_phone');
+            localStorage.removeItem('realty_last_search_phone');
+            localStorage.removeItem('ps24_logged_in_customer_id');
+            
+            // [추가] 카카오 로그아웃 시 장바구니(FNB), 관심 서비스(SRV), 관심 매물(Realty) 내역 모두 삭제
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const lowerKey = key.toLowerCase();
+                    // 장바구니(cart) 및 관심 상품/매물(favorite, wish, like) 관련 키 탐색 후 삭제 예약
+                    if (lowerKey.includes('cart') || lowerKey.includes('favorite') || lowerKey.includes('wish') || lowerKey.includes('like')) {
+                        keysToRemove.push(key);
+                    }
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+            isLoggingOut = false;
+        }
+    }
+});
+
+// [추가] 카카오에 이미 로그인 된 상태에서 플로팅 버튼(나의 예약, 주문 조회 등)을 눌렀을 때 
+// '로그인 방법 선택' 모달이 뜨는 현상을 강제 차단하고 즉시 내역 조회 모달로 직행하게 합니다.
+document.addEventListener('DOMContentLoaded', function() {
+    const loginChoiceModalEl = document.getElementById('loginChoiceModal');
+    if (loginChoiceModalEl) {
+        loginChoiceModalEl.addEventListener('show.bs.modal', function(e) {
+            const isLoggedIn = '<?php echo isset($_SESSION["customer_id"]) ? "1" : "0"; ?>';
+            
+            // [개선] 모달이 화면에 뜨기 직전에 요청된 액션과 저장된 전화번호 유무를 확인합니다.
+            const action = sessionStorage.getItem('postLoginAction') || window.loginChoiceContext || window.pendingPhInfoAction || window.pendingFnbAction || window.pendingRealtyAction || '';
+            const savedPhone = localStorage.getItem('srv_last_search_phone') || localStorage.getItem('ps24_guest_phone') || localStorage.getItem('realty_last_search_phone') || '';
+
+            // 1. "나의 예약(srv_history)" 버튼 클릭 시 전화번호가 있다면, 로그인 선택 모달을 건너뛰고 내역을 즉시 띄웁니다.
+            if (action === 'srv_history' && savedPhone) {
+                e.preventDefault();
+                setTimeout(() => {
+                    sessionStorage.removeItem('postLoginAction');
+                    window.loginChoiceContext = null;
+                    if (typeof window.fetchServiceInquiryHistory === 'function') {
+                        window.fetchServiceInquiryHistory(savedPhone);
+                    } else {
+                        if (typeof showBsModal === 'function') showBsModal('orderHistoryModal');
+                    }
+                }, 50);
+                return;
+            }
+
+            // 2. FNB 주문 내역 및 부동산 문의 내역에 대해서도 동일한 스마트 UX 제공
+            if ((action === 'history' || action === 'fnb_history' || action === 'realty_history' || action === 'viewHistory') && savedPhone) {
+                e.preventDefault();
+                setTimeout(() => {
+                    sessionStorage.removeItem('postLoginAction');
+                    window.loginChoiceContext = null;
+                    if ((action === 'history' || action === 'fnb_history') && typeof showBsModal === 'function') {
+                        showBsModal('orderHistoryModal');
+                        if (typeof searchOrderHistory === 'function') searchOrderHistory();
+                    } else if (typeof openRealtyOrderHistoryModal === 'function') {
+                        openRealtyOrderHistoryModal();
+                    }
+                }, 50);
+                return;
+            }
+
+            if (isLoggedIn === "1") {
+                e.preventDefault(); // 로그인 모달이 화면에 뜨는 것을 원천 차단
+
+                // 약간의 딜레이(50ms)를 주어 클릭 이벤트의 전역 변수(context 등) 셋팅이 끝난 후 목적지로 분기
+                setTimeout(() => {
+                    // 액션 캡처 후 초기화
+                    sessionStorage.removeItem('postLoginAction');
+                    window.loginChoiceContext = null;
+                    
+                    if (action === 'history' || action === 'fnb_history') {
+                        if (typeof showBsModal === 'function') showBsModal('orderHistoryModal');
+                        if (typeof searchOrderHistory === 'function') searchOrderHistory();
+                    } else if (action === 'realty_history' || action === 'viewHistory') {
+                        if (typeof openRealtyOrderHistoryModal === 'function') openRealtyOrderHistoryModal();
+                    } else if (action === 'srv_history') {
+                        // 여기까지 도달했다는 것은 로그인 상태이지만 전화번호가 없는 경우입니다. 
+                        // 따라서 연락처 등록 모달을 먼저 띄우고, 등록이 끝나면 내역으로 자연스럽게 넘어가도록 조치합니다.
+                        window.pendingPhInfoAction = 'srv_history';
+                        if (typeof showBsModal === 'function') showBsModal('phInfoModal');
+                    } else if (action === 'cart') {
+                        if (typeof renderCartModalContent === 'function') renderCartModalContent();
+                        if (typeof showBsModal === 'function') showBsModal('cartModal');
+                    } else if (action === 'realty_cart_inquiry') {
+                        if (typeof showCartViewModal === 'function') showCartViewModal();
+                    } else if (action === 'review') {
+                        if (typeof openReviewWriteModal === 'function') openReviewWriteModal();
+                    } else {
+                        // 기본 폴백: 카테고리를 자동 추론하여 적절한 내역 모달 띄우기
+                        if (typeof REALTY_CONFIG !== 'undefined' && typeof openRealtyOrderHistoryModal === 'function') {
+                            openRealtyOrderHistoryModal();
+                        } else if (typeof SRV_CONFIG !== 'undefined' && typeof window.fetchServiceInquiryHistory === 'function') {
+                            const savedPhone = localStorage.getItem('srv_last_search_phone') || localStorage.getItem('ps24_guest_phone') || '';
+                            // [수정] 전화번호가 없으면 내역 조회 대신 연락처 등록 모달을 먼저 띄웁니다.
+                            if (savedPhone) {
+                                window.fetchServiceInquiryHistory(savedPhone);
+                            } else {
+                                window.pendingPhInfoAction = 'srv_history'; // 후속 조치 예약
+                                if (typeof showBsModal === 'function') showBsModal('phInfoModal');
+                            }
+                        } else if (typeof showBsModal === 'function') {
+                            showBsModal('orderHistoryModal');
+                        }
+                    }
+                }, 50);
+            }
+        });
+    }
+});
 </script>
 
 <!-- [공통] 리뷰 작성 모달 (reviewWriteModal) -->
